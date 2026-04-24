@@ -1,24 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useXanaxTracker } from "@/hooks/use-xanax-tracker";
 import { useApiKey } from "@/hooks/use-api-key";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pill, ChevronDown, Plus, Minus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { formatTimeRemaining } from "@/hooks/use-tick";
 
-const XANAX_COOLDOWN_SECS = 6 * 3600; // 6 hours
+const XANAX_COOLDOWN_MAX = 6 * 3600; // 21600s
 
 function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split("-").map(Number);
   const d = new Date(year, month - 1, day);
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-function formatCountdown(secs: number): string {
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = secs % 60;
-  return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 function DayDots({ count, goal }: { count: number; goal: number }) {
@@ -40,35 +34,27 @@ function DayDots({ count, goal }: { count: number; goal: number }) {
   );
 }
 
-function useCooldownSecs(lastUsedTimestamp: number | null): number | null {
-  const [secs, setSecs] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (lastUsedTimestamp === null) { setSecs(null); return; }
-    const compute = () => {
-      const elapsed = Math.floor(Date.now() / 1000) - lastUsedTimestamp;
-      return Math.max(0, XANAX_COOLDOWN_SECS - elapsed);
-    };
-    setSecs(compute());
-    const id = setInterval(() => setSecs(compute()), 1000);
-    return () => clearInterval(id);
-  }, [lastUsedTimestamp]);
-
-  return secs;
+interface XanaxTrackerProps {
+  xantakenTotal: number | undefined;
+  drugCooldown?: number;
+  tick: number;
 }
 
-export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefined }) {
+export function XanaxTracker({ xantakenTotal, drugCooldown, tick }: XanaxTrackerProps) {
   const { apiKey } = useApiKey();
-  const { todayCount, sourceIsLog, sourceIsManual, adjustManual, monthData, today, goal, lastUsedTimestamp } =
+  const { todayCount, sourceIsLog, sourceIsManual, adjustManual, monthData, today, goal } =
     useXanaxTracker(apiKey, xantakenTotal);
 
-  const cooldownSecs = useCooldownSecs(lastUsedTimestamp);
-  const ready = cooldownSecs === 0;
-  const cooldownPct = cooldownSecs !== null
-    ? Math.min(100, ((XANAX_COOLDOWN_SECS - cooldownSecs) / XANAX_COOLDOWN_SECS) * 100)
-    : null;
-
   const [historyOpen, setHistoryOpen] = useState(false);
+
+  // Cooldown from API — same pattern as the Cooldowns card
+  const hasCooldown = (drugCooldown ?? 0) > 0;
+  const remaining = hasCooldown ? Math.max(0, (drugCooldown ?? 0) - tick) : 0;
+  const ready = hasCooldown && remaining === 0;
+  // Bar fills from 0→100% as cooldown drains to 0 (counting up to ready)
+  const cooldownPct = hasCooldown
+    ? Math.min(100, ((XANAX_COOLDOWN_MAX - remaining) / XANAX_COOLDOWN_MAX) * 100)
+    : null;
 
   const pct = Math.min(100, (todayCount / goal) * 100);
   const metGoal = todayCount >= goal;
@@ -154,7 +140,7 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
             </div>
           </div>
 
-          {/* Cooldown bar */}
+          {/* Drug cooldown bar */}
           {cooldownPct !== null && (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -171,14 +157,14 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
                   </motion.span>
                 ) : (
                   <span className="text-[11px] font-mono font-bold tabular-nums text-muted-foreground">
-                    {formatCountdown(cooldownSecs!)}
+                    {formatTimeRemaining(remaining)}
                   </span>
                 )}
               </div>
               <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
                 <motion.div
                   className={cn(
-                    "h-full rounded-full transition-colors",
+                    "h-full rounded-full",
                     ready ? "bg-green-500" : cooldownPct > 75 ? "bg-amber-400" : "bg-primary/70"
                   )}
                   animate={{ width: `${cooldownPct}%` }}

@@ -801,7 +801,7 @@ export default function Dashboard() {
         </CardContent>
       </Card>
     );
-    if (panelId === "xanax-tracker") return <XanaxTracker xantakenTotal={data.personalstats?.xantaken} />;
+    if (panelId === "xanax-tracker") return <XanaxTracker xantakenTotal={data.personalstats?.xantaken} drugCooldown={data.cooldowns?.drug} tick={tick} />;
     if (panelId === "selected-stats") return <SelectedStats stats={data.personalstats} />;
     return null;
   };
