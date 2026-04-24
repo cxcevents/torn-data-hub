@@ -646,7 +646,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-2.5">
                 {factionData?.tag_image && (
                   <img
-                    src={`https://www.torn.com/${factionData.tag_image}`}
+                    src={`https://factiontags.torn.com/${factionData.tag_image.split("/").pop()}`}
                     alt={faction.faction_tag}
                     className="w-10 h-10 object-contain flex-shrink-0"
                     onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
