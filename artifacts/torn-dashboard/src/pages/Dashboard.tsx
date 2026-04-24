@@ -9,7 +9,7 @@ import { Onboarding } from "@/components/onboarding";
 import { Link } from "wouter";
 import { 
   AlertCircle, Terminal, Activity, Shield, Swords, Clock, Plane, 
-  GraduationCap, Banknote, Coins, Bell, Calendar, Award, Mail, Target,
+  GraduationCap, Banknote, Coins, Bell, Calendar, Award, Target,
   BatteryCharging, Briefcase, Medal, Star, Move
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -360,7 +360,7 @@ export default function Dashboard() {
                   : "text-muted-foreground border-border/40 hover:text-foreground hover:border-border"
               )}
             >
-              <Mail className="h-3.5 w-3.5" />
+              <svg viewBox="0 0 18 14" className="h-3.5 w-3.5" fill="currentColor"><path d="M9,8,0,1H18ZM4.93,6.7,0,2.85v9Zm8.14,0L18,11.88v-9Zm-1.17.91L9,9.87,6.1,7.61,0,14H18Z"/></svg>
               Messages
               {data.newmessages > 0 && (
                 <span className="bg-primary text-primary-foreground text-[9px] px-1 py-0.5 rounded font-bold leading-none">
