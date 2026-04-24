@@ -9,7 +9,7 @@ import { Onboarding } from "@/components/onboarding";
 import { Link } from "wouter";
 import { 
   AlertCircle, Terminal, Activity, Shield, Swords, Clock, Plane, 
-  GraduationCap, Banknote, Coins, Bell, Calendar, Award,
+  GraduationCap, Banknote, Coins, Bell, Calendar, Award, Mail, Target,
   BatteryCharging, Briefcase, Medal, Star, Move
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -346,6 +346,47 @@ export default function Dashboard() {
                 <span>Age: {data.age}d</span>
               </div>
             </div>
+          </div>
+
+          <div className="hidden md:flex items-center gap-2">
+            <a
+              href="https://www.torn.com/messages.php"
+              target="_blank"
+              rel="noreferrer"
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider border transition-colors",
+                data.newmessages > 0
+                  ? "bg-primary/15 text-primary border-primary/40"
+                  : "text-muted-foreground border-border/40 hover:text-foreground hover:border-border"
+              )}
+            >
+              <Mail className="h-3.5 w-3.5" />
+              Messages
+              {data.newmessages > 0 && (
+                <span className="bg-primary text-primary-foreground text-[9px] px-1 py-0.5 rounded font-bold leading-none">
+                  {data.newmessages}
+                </span>
+              )}
+            </a>
+            <a
+              href="https://www.torn.com/events.php"
+              target="_blank"
+              rel="noreferrer"
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider border transition-colors",
+                data.newevents > 0
+                  ? "bg-primary/15 text-primary border-primary/40"
+                  : "text-muted-foreground border-border/40 hover:text-foreground hover:border-border"
+              )}
+            >
+              <Target className="h-3.5 w-3.5" />
+              Events
+              {data.newevents > 0 && (
+                <span className="bg-primary text-primary-foreground text-[9px] px-1 py-0.5 rounded font-bold leading-none">
+                  {data.newevents}
+                </span>
+              )}
+            </a>
           </div>
 
           <div className="flex flex-col items-start md:items-end justify-center space-y-1.5">

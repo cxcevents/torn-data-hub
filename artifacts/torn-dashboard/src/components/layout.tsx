@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useApiKey } from "@/hooks/use-api-key";
-import { Settings, Code, Moon, Sun, RefreshCw, Lock, LockOpen, Mail, Target } from "lucide-react";
+import { Settings, Code, Moon, Sun, RefreshCw, Lock, LockOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useTornUser } from "@/hooks/use-torn-user";
@@ -91,49 +91,6 @@ export function Layout({ children }: LayoutProps) {
               </div>
             )}
           </div>
-
-          {data && (
-            <div className="hidden md:flex items-center gap-2">
-              <a
-                href="https://www.torn.com/messages.php"
-                target="_blank"
-                rel="noreferrer"
-                className={cn(
-                  "relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider border transition-colors",
-                  data.newmessages > 0
-                    ? "bg-primary/15 text-primary border-primary/40 shadow-[0_0_8px_rgba(var(--primary),0.3)]"
-                    : "text-muted-foreground border-border/40 hover:text-foreground hover:border-border"
-                )}
-              >
-                <Mail className="h-3.5 w-3.5" />
-                Messages
-                {data.newmessages > 0 && (
-                  <span className="bg-primary text-primary-foreground text-[9px] px-1 py-0.5 rounded font-bold leading-none">
-                    {data.newmessages}
-                  </span>
-                )}
-              </a>
-              <a
-                href="https://www.torn.com/events.php"
-                target="_blank"
-                rel="noreferrer"
-                className={cn(
-                  "relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider border transition-colors",
-                  data.newevents > 0
-                    ? "bg-primary/15 text-primary border-primary/40 shadow-[0_0_8px_rgba(var(--primary),0.3)]"
-                    : "text-muted-foreground border-border/40 hover:text-foreground hover:border-border"
-                )}
-              >
-                <Target className="h-3.5 w-3.5" />
-                Events
-                {data.newevents > 0 && (
-                  <span className="bg-primary text-primary-foreground text-[9px] px-1 py-0.5 rounded font-bold leading-none">
-                    {data.newevents}
-                  </span>
-                )}
-              </a>
-            </div>
-          )}
 
           <div className="flex items-center gap-2 md:gap-4">
             {apiKey && (
