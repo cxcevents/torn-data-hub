@@ -188,11 +188,13 @@ function ProgressBar({
   );
 }
 
-function SortablePanel({ id, locked, children }: { id: string; locked: boolean; children: React.ReactNode }) {
+const COMPACT_PANELS = new Set(["vitals-side", "cooldowns"]);
+
+function SortablePanel({ id, locked, children, className }: { id: string; locked: boolean; children: React.ReactNode; className?: string }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: locked });
   const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : undefined };
   return (
-    <div ref={setNodeRef} style={style} className={cn("relative group rounded-xl transition-shadow", isDragging && "opacity-60", !locked && "hover:ring-1 hover:ring-primary/30 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.15),0_0_12px_hsl(var(--primary)/0.08)]")}>
+    <div ref={setNodeRef} style={style} className={cn("relative group rounded-xl transition-shadow", isDragging && "opacity-60", !locked && "hover:ring-1 hover:ring-primary/30 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.15),0_0_12px_hsl(var(--primary)/0.08)]", className)}>
       {!locked && (
         <div
           {...attributes}
@@ -371,11 +373,11 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
 
         {/* LEFT COLUMN (WIDER) */}
-        <div className="space-y-4 lg:col-span-8">
+        <div className="grid grid-cols-2 gap-4 lg:col-span-8">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd("left")}>
             <SortableContext items={order.left} strategy={verticalListSortingStrategy}>
               {order.left.map((panelId) => (
-                <SortablePanel key={panelId} id={panelId} locked={locked}>
+                <SortablePanel key={panelId} id={panelId} locked={locked} className={COMPACT_PANELS.has(panelId) ? "col-span-1" : "col-span-2"}>
 
                   {/* VITALS CARD */}
                   {panelId === "vitals" && (
