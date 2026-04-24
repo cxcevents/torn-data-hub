@@ -192,7 +192,7 @@ function SortablePanel({ id, locked, children }: { id: string; locked: boolean; 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: locked });
   const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : undefined };
   return (
-    <div ref={setNodeRef} style={style} className={cn("relative group", isDragging && "opacity-60")}>
+    <div ref={setNodeRef} style={style} className={cn("relative group rounded-xl transition-shadow", isDragging && "opacity-60", !locked && "hover:ring-1 hover:ring-primary/30 hover:shadow-[0_0_0_1px_hsl(var(--primary)/0.15),0_0_12px_hsl(var(--primary)/0.08)]")}>
       {!locked && (
         <div
           {...attributes}
