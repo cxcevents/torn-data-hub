@@ -5,11 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 export default function Settings() {
   const { apiKey, setApiKey } = useApiKey();
   const [inputKey, setInputKey] = useState("");
   const { toast } = useToast();
+  const [, navigate] = useLocation();
 
   const handleUpdate = () => {
     if (inputKey.trim()) {
@@ -21,7 +23,7 @@ export default function Settings() {
 
   const handleClear = () => {
     setApiKey(null);
-    toast({ title: "API Key Cleared", description: "You are now disconnected." });
+    navigate("/");
   };
 
   const maskedKey = apiKey ? `••••••••••••${apiKey.slice(-4)}` : "No key set";
@@ -44,7 +46,7 @@ export default function Settings() {
               <span>{maskedKey}</span>
               {apiKey && (
                 <Button variant="destructive" size="sm" onClick={handleClear}>
-                  Clear Key
+                  Log Out
                 </Button>
               )}
             </div>
