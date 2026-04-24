@@ -6,7 +6,7 @@ import { useApiKey } from "@/hooks/use-api-key";
 import { useTick, formatTimeRemaining } from "@/hooks/use-tick";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, ChevronDown, RotateCw, Zap } from "lucide-react";
+import { AlertCircle, ChevronDown, RotateCw, Syringe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion, useAnimationControls, AnimatePresence } from "framer-motion";
@@ -192,9 +192,9 @@ export function ActiveEnhancers() {
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-primary/5 transition-colors rounded-t-xl group"
       >
         <div className="flex items-center gap-2.5">
-          <Zap className="w-3.5 h-3.5 text-primary" />
+          <Syringe className="w-3.5 h-3.5 text-primary" />
           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Active Enhancers
+            Active Enhancers <span className="text-muted-foreground/50">(WIP)</span>
           </span>
           {activeCount > 0 && (
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
