@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useApiKey } from "@/hooks/use-api-key";
 import { useTornUser } from "@/hooks/use-torn-user";
 import { useEnhancerLog } from "@/hooks/use-enhancer-log";
@@ -12,7 +12,7 @@ import {
   AlertCircle, Terminal, Activity, Shield, Swords, Clock, Plane, 
   GraduationCap, Banknote, Coins, Calendar, Award,
   BatteryCharging, Briefcase, Medal, Star, Move, Users, CalendarDays, ExternalLink,
-  ArrowDownUp, ArrowDownAZ, ArrowDown01
+  ArrowDownUp, ArrowDownAZ, ArrowDown01, SlidersHorizontal, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTick, formatTimeRemaining } from "@/hooks/use-tick";
@@ -263,6 +263,137 @@ function CompactList({ title, items, icon: Icon }: { title: string, items: {labe
         {sorted.length === 0 && <div className="text-[11px] text-muted-foreground text-center py-2">None</div>}
       </div>
     </div>
+  );
+}
+
+const STATS_CATALOGUE: { key: string; label: string }[] = [
+  { key: "xantaken",           label: "Xanax Taken" },
+  { key: "attackswon",         label: "Attacks Won" },
+  { key: "attackslost",        label: "Attacks Lost" },
+  { key: "attacksdraw",        label: "Attacks Drawn" },
+  { key: "defendswon",         label: "Defends Won" },
+  { key: "defendslost",        label: "Defends Lost" },
+  { key: "defendsdrawn",       label: "Defends Drawn" },
+  { key: "peoplebusted",       label: "Busts" },
+  { key: "failedbusts",        label: "Failed Busts" },
+  { key: "moneymugged",        label: "Money Mugged" },
+  { key: "bountiescollected",  label: "Bounties Collected" },
+  { key: "bountiesplaced",     label: "Bounties Placed" },
+  { key: "bountiesreceived",   label: "Bounties Received" },
+  { key: "killstreak",         label: "Kill Streak" },
+  { key: "bestdamage",         label: "Best Damage" },
+  { key: "roundsfired",        label: "Rounds Fired" },
+  { key: "medicalitemsused",   label: "Medical Items Used" },
+  { key: "overdosed",          label: "Overdoses" },
+  { key: "statenhancersused",  label: "Enhancers Used" },
+  { key: "boostersused",       label: "Boosters Used" },
+  { key: "candyused",          label: "Candy Used" },
+  { key: "alcoholused",        label: "Alcohol Used" },
+  { key: "energydrinkused",    label: "Energy Drinks Used" },
+  { key: "drugsused",          label: "Drugs Used" },
+  { key: "daysbeendonator",    label: "Donator Days" },
+  { key: "meritsbought",       label: "Merits Bought" },
+  { key: "refills",            label: "Refills Used" },
+  { key: "tokenrefills",       label: "Token Refills" },
+  { key: "traveltimes",        label: "Travels" },
+  { key: "itemsbought",        label: "Items Bought" },
+  { key: "itemsboughtabroad",  label: "Items Bought Abroad" },
+  { key: "itemssent",          label: "Items Sent" },
+  { key: "auctionswon",        label: "Auctions Won" },
+  { key: "auctionsells",       label: "Auctions Sold" },
+  { key: "itemslooted",        label: "Items Looted" },
+  { key: "racingwins",         label: "Racing Wins" },
+  { key: "racinglosses",       label: "Racing Losses" },
+  { key: "racingskill",        label: "Racing Skill" },
+  { key: "jailed",             label: "Times Jailed" },
+  { key: "hospital",           label: "Times Hospitalized" },
+  { key: "highestbeaten",      label: "Highest Level Beaten" },
+  { key: "peoplebought",       label: "Slaves Bought" },
+];
+
+const SELECTED_STATS_KEY = "torn_selected_stats_v1";
+const DEFAULT_SELECTED = ["xantaken", "attackswon", "peoplebusted", "daysbeendonator"];
+
+function SelectedStats({ stats }: { stats?: Record<string, number> }) {
+  const [picking, setPicking] = useState(false);
+  const [selected, setSelected] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(SELECTED_STATS_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_SELECTED;
+    } catch { return DEFAULT_SELECTED; }
+  });
+
+  const toggle = useCallback((key: string) => {
+    setSelected(prev => {
+      const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key];
+      localStorage.setItem(SELECTED_STATS_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const visibleStats = STATS_CATALOGUE.filter(s => selected.includes(s.key));
+
+  return (
+    <Card className="bg-card shadow-sm">
+      <CardHeader className="p-3 pb-2">
+        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+          <Activity className="w-3.5 h-3.5 text-primary" />
+          <span className="flex-1">Personal Stats</span>
+          <button
+            onClick={() => setPicking(v => !v)}
+            className={cn(
+              "flex items-center gap-1 px-1.5 py-0.5 rounded border text-[9px] font-bold uppercase tracking-wider transition-colors",
+              picking
+                ? "bg-primary/20 border-primary/40 text-primary"
+                : "bg-muted/40 border-border text-muted-foreground hover:text-foreground hover:border-border/80"
+            )}
+            title={picking ? "Done selecting" : "Choose which stats to show"}
+          >
+            {picking ? <X className="w-3 h-3" /> : <SlidersHorizontal className="w-3 h-3" />}
+            {picking ? "Done" : "Choose"}
+          </button>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-3 pt-0">
+        {picking ? (
+          <div>
+            <p className="text-[10px] text-muted-foreground mb-2">Select the stats you want to track. Click any to toggle.</p>
+            <div className="flex flex-wrap gap-1.5">
+              {STATS_CATALOGUE.map(({ key, label }) => {
+                const on = selected.includes(key);
+                return (
+                  <button
+                    key={key}
+                    onClick={() => toggle(key)}
+                    className={cn(
+                      "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border transition-colors",
+                      on
+                        ? "bg-primary/20 border-primary/40 text-primary"
+                        : "bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+                    )}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-1 text-[11px]">
+            {visibleStats.length === 0 && (
+              <div className="text-muted-foreground text-center py-3">No stats selected — click Choose to add some.</div>
+            )}
+            {visibleStats.map(({ key, label }, i) => (
+              <div key={key} className={cn("flex justify-between py-0.5", i < visibleStats.length - 1 && "border-b border-border/30")}>
+                <span className="text-muted-foreground font-bold uppercase tracking-wider">{label}</span>
+                <span className="font-mono">{formatNumber(stats?.[key] || 0)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -934,35 +1065,8 @@ export default function Dashboard() {
             </CardContent>
           </Card>}
 
-                  {/* PERSONAL STATS MINI */}
-                  {panelId === "selected-stats" && <Card className="bg-card shadow-sm">
-            <CardHeader className="p-3 pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Activity className="w-3.5 h-3.5 text-primary" />
-                Selected Stats
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 pt-0">
-              <div className="space-y-1 text-[11px]">
-                <div className="flex justify-between py-0.5 border-b border-border/30">
-                  <span className="text-muted-foreground font-bold uppercase tracking-wider">Xanax</span>
-                  <span className="font-mono">{formatNumber(data.personalstats?.xantaken || 0)}</span>
-                </div>
-                <div className="flex justify-between py-0.5 border-b border-border/30">
-                  <span className="text-muted-foreground font-bold uppercase tracking-wider">Attacks Won</span>
-                  <span className="font-mono">{formatNumber(data.personalstats?.attackswon || 0)}</span>
-                </div>
-                <div className="flex justify-between py-0.5 border-b border-border/30">
-                  <span className="text-muted-foreground font-bold uppercase tracking-wider">Busts</span>
-                  <span className="font-mono">{formatNumber(data.personalstats?.peoplebusted || 0)}</span>
-                </div>
-                <div className="flex justify-between py-0.5">
-                  <span className="text-muted-foreground font-bold uppercase tracking-wider">Donator Days</span>
-                  <span className="font-mono">{formatNumber(data.personalstats?.daysbeendonator || 0)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>}
+                  {/* PERSONAL STATS */}
+                  {panelId === "selected-stats" && <SelectedStats stats={data.personalstats} />}
 
                 </SortablePanel>
               ))}
