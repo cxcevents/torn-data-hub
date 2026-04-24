@@ -11,7 +11,8 @@ import { Link } from "wouter";
 import { 
   AlertCircle, Terminal, Activity, Shield, Swords, Clock, Plane, 
   GraduationCap, Banknote, Coins, Calendar, Award,
-  BatteryCharging, Briefcase, Medal, Star, Move, Users, CalendarDays, ExternalLink
+  BatteryCharging, Briefcase, Medal, Star, Move, Users, CalendarDays, ExternalLink,
+  ArrowDownUp, ArrowDownAZ, ArrowDown01
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTick, formatTimeRemaining } from "@/hooks/use-tick";
@@ -221,21 +222,45 @@ function DroppableColumn({ id, children, className }: { id: string; children: Re
   );
 }
 
+type CompactSortMode = "value-desc" | "az";
+
 function CompactList({ title, items, icon: Icon }: { title: string, items: {label: string, value: any}[], icon: any }) {
+  const [sortMode, setSortMode] = useState<CompactSortMode>("value-desc");
+
+  const sorted = [...items].sort((a, b) =>
+    sortMode === "az"
+      ? String(a.label).localeCompare(String(b.label))
+      : Number(b.value) - Number(a.value)
+  );
+
+  const cycleSort = () =>
+    setSortMode(m => m === "value-desc" ? "az" : "value-desc");
+
   return (
     <div className="bg-muted/20 border border-border/50 rounded-md p-3">
       <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border/50">
         <Icon className="w-4 h-4 text-primary" />
-        <h4 className="text-xs font-bold uppercase tracking-wider">{title}</h4>
+        <h4 className="text-xs font-bold uppercase tracking-wider flex-1">{title}</h4>
+        <button
+          onClick={cycleSort}
+          title={sortMode === "value-desc" ? "Sorted: highest first — click for A→Z" : "Sorted: A→Z — click for highest first"}
+          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors px-1.5 py-0.5 rounded hover:bg-muted/40"
+        >
+          {sortMode === "value-desc"
+            ? <ArrowDown01 className="w-3 h-3" />
+            : <ArrowDownAZ className="w-3 h-3" />
+          }
+          <span className="font-bold uppercase tracking-wider">{sortMode === "value-desc" ? "9→1" : "A→Z"}</span>
+        </button>
       </div>
       <div className="space-y-1.5 max-h-[120px] overflow-y-auto custom-scrollbar pr-1">
-        {items.map((item, i) => (
+        {sorted.map((item, i) => (
           <div key={i} className="flex justify-between items-center text-[11px]">
             <span className="text-muted-foreground truncate mr-2">{item.label}</span>
             <span className="font-mono font-medium">{item.value}</span>
           </div>
         ))}
-        {items.length === 0 && <div className="text-[11px] text-muted-foreground text-center py-2">None</div>}
+        {sorted.length === 0 && <div className="text-[11px] text-muted-foreground text-center py-2">None</div>}
       </div>
     </div>
   );
