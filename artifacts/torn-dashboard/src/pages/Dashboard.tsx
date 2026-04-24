@@ -188,7 +188,6 @@ function ProgressBar({
   );
 }
 
-const COMPACT_PANELS = new Set(["vitals", "vitals-side", "cooldowns", "stats", "assets", "education"]);
 
 function SortablePanel({ id, locked, children, className }: { id: string; locked: boolean; children: React.ReactNode; className?: string }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: locked });
@@ -411,14 +410,14 @@ export default function Dashboard() {
       {/* 2. ACTIVE ENHANCERS */}
       <ActiveEnhancers />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
-        {/* LEFT COLUMN (WIDER) */}
-        <div className="grid grid-cols-2 gap-4 lg:col-span-8">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd("left")}>
-            <SortableContext items={order.left} strategy={verticalListSortingStrategy}>
-              {order.left.map((panelId) => (
-                <SortablePanel key={panelId} id={panelId} locked={locked} className={COMPACT_PANELS.has(panelId) ? "col-span-1 self-start" : "col-span-2"}>
+        {/* COLUMN A: vitals, cooldowns, assets */}
+        <div className="space-y-4">
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd("left-a")}>
+            <SortableContext items={order["left-a"]} strategy={verticalListSortingStrategy}>
+              {order["left-a"].map((panelId) => (
+                <SortablePanel key={panelId} id={panelId} locked={locked}>
 
                   {/* VITALS CARD */}
                   {panelId === "vitals" && (
@@ -452,32 +451,6 @@ export default function Dashboard() {
                     </Card>
                   )}
 
-                  {/* WALLET, CHAIN & TRAVEL */}
-                  {panelId === "vitals-side" && (
-                    <div className="space-y-4">
-                      {data.chain && data.chain.current > 0 && (
-                        <Card className="bg-purple-500/5 border-purple-500/20">
-                          <CardContent className="p-3">
-                            <ProgressBar label={`Chain (x${data.chain.modifier})`} current={data.chain.current} max={data.chain.maximum} timeRemainingSeconds={data.chain.timeout} tick={tick} colorClass="bg-purple-500" />
-                          </CardContent>
-                        </Card>
-                      )}
-                      {data.travel && data.travel.time_left > 0 && (
-                        <Card className="bg-blue-500/5 border-blue-500/20">
-                          <CardContent className="p-3 flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                              <Plane className="w-4 h-4 text-blue-400" />
-                              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400">To {data.travel.destination}</span>
-                            </div>
-                            <span className="font-mono text-sm font-bold text-blue-400">
-                              {formatTimeRemaining(Math.max(0, data.travel.time_left - tick))}
-                            </span>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
-                  )}
-
                   {/* COOLDOWNS */}
                   {panelId === "cooldowns" && (
                     <Card className="bg-card shadow-sm">
@@ -499,12 +472,7 @@ export default function Dashboard() {
                             <div key={cd.label} className="flex justify-between items-center">
                               <span className="text-muted-foreground font-bold uppercase tracking-wider">{cd.label}</span>
                               {isReady && cd.readyHref ? (
-                                <a
-                                  href={cd.readyHref}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="font-bold text-[9px] uppercase tracking-widest px-2 py-0.5 rounded border border-yellow-500/40 bg-yellow-500/10 text-yellow-400 animate-pulse hover:opacity-80 transition-opacity"
-                                >
+                                <a href={cd.readyHref} target="_blank" rel="noreferrer" className="font-bold text-[9px] uppercase tracking-widest px-2 py-0.5 rounded border border-yellow-500/40 bg-yellow-500/10 text-yellow-400 animate-pulse hover:opacity-80 transition-opacity">
                                   {cd.readyLabel}
                                 </a>
                               ) : (
@@ -515,54 +483,6 @@ export default function Dashboard() {
                             </div>
                           );
                         })}
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* BATTLE STATS & WORK STATS */}
-                  {panelId === "stats" && (
-                    <Card className="bg-card shadow-sm">
-                      <CardHeader className="p-3 pb-0">
-                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                          <Swords className="w-3.5 h-3.5 text-primary" />
-                          Stats
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3 pt-2">
-                        <div className="grid grid-cols-1 gap-2 mb-3">
-                          <EffectiveStatBox label="Strength" base={data.strength || 0} modifierPct={data.strength_modifier || 0} activeBonusPct={activeEnhancerBonus.strength} />
-                          <EffectiveStatBox label="Defense" base={data.defense || 0} modifierPct={data.defense_modifier || 0} activeBonusPct={activeEnhancerBonus.defense} />
-                          <EffectiveStatBox label="Speed" base={data.speed || 0} modifierPct={data.speed_modifier || 0} activeBonusPct={activeEnhancerBonus.speed} />
-                          <EffectiveStatBox label="Dexterity" base={data.dexterity || 0} modifierPct={data.dexterity_modifier || 0} activeBonusPct={activeEnhancerBonus.dexterity} />
-                        </div>
-                        {(() => {
-                          const baseTotal = data.total || 0;
-                          const effTotal =
-                            Math.round((data.strength || 0) * (1 + ((data.strength_modifier || 0) + activeEnhancerBonus.strength) / 100)) +
-                            Math.round((data.defense || 0) * (1 + ((data.defense_modifier || 0) + activeEnhancerBonus.defense) / 100)) +
-                            Math.round((data.speed || 0) * (1 + ((data.speed_modifier || 0) + activeEnhancerBonus.speed) / 100)) +
-                            Math.round((data.dexterity || 0) * (1 + ((data.dexterity_modifier || 0) + activeEnhancerBonus.dexterity) / 100));
-                          const totalAffected = effTotal !== baseTotal;
-                          return (
-                            <div className="bg-primary/5 rounded-md p-2 border border-primary/10 flex justify-between items-center mb-3">
-                              <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Total</span>
-                              <div className="flex items-baseline gap-2">
-                                <span className="font-mono font-bold text-sm text-primary">{formatLargeNumber(baseTotal)}</span>
-                                {totalAffected && (
-                                  <>
-                                    <span className="text-muted-foreground text-[10px]">/</span>
-                                    <span className="font-mono font-bold text-sm text-emerald-400">{formatLargeNumber(effTotal)}</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })()}
-                        <div className="space-y-1.5 pt-2 border-t border-border/50">
-                          <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">MANUAL</span><span className="font-mono">{formatNumber(data.manual_labor || 0)}</span></div>
-                          <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">INTEL</span><span className="font-mono">{formatNumber(data.intelligence || 0)}</span></div>
-                          <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">ENDUR</span><span className="font-mono">{formatNumber(data.endurance || 0)}</span></div>
-                        </div>
                       </CardContent>
                     </Card>
                   )}
@@ -626,6 +546,93 @@ export default function Dashboard() {
                     </Card>
                   )}
 
+                </SortablePanel>
+              ))}
+            </SortableContext>
+          </DndContext>
+        </div>
+
+        {/* COLUMN B: vitals-side, stats, education */}
+        <div className="space-y-4">
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd("left-b")}>
+            <SortableContext items={order["left-b"]} strategy={verticalListSortingStrategy}>
+              {order["left-b"].map((panelId) => (
+                <SortablePanel key={panelId} id={panelId} locked={locked}>
+
+                  {/* CHAIN & TRAVEL */}
+                  {panelId === "vitals-side" && (
+                    <div className="space-y-4">
+                      {data.chain && data.chain.current > 0 && (
+                        <Card className="bg-purple-500/5 border-purple-500/20">
+                          <CardContent className="p-3">
+                            <ProgressBar label={`Chain (x${data.chain.modifier})`} current={data.chain.current} max={data.chain.maximum} timeRemainingSeconds={data.chain.timeout} tick={tick} colorClass="bg-purple-500" />
+                          </CardContent>
+                        </Card>
+                      )}
+                      {data.travel && data.travel.time_left > 0 && (
+                        <Card className="bg-blue-500/5 border-blue-500/20">
+                          <CardContent className="p-3 flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              <Plane className="w-4 h-4 text-blue-400" />
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400">To {data.travel.destination}</span>
+                            </div>
+                            <span className="font-mono text-sm font-bold text-blue-400">
+                              {formatTimeRemaining(Math.max(0, data.travel.time_left - tick))}
+                            </span>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                  )}
+
+                  {/* BATTLE STATS & WORK STATS */}
+                  {panelId === "stats" && (
+                    <Card className="bg-card shadow-sm">
+                      <CardHeader className="p-3 pb-0">
+                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                          <Swords className="w-3.5 h-3.5 text-primary" />
+                          Stats
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-3 pt-2">
+                        <div className="grid grid-cols-1 gap-2 mb-3">
+                          <EffectiveStatBox label="Strength" base={data.strength || 0} modifierPct={data.strength_modifier || 0} activeBonusPct={activeEnhancerBonus.strength} />
+                          <EffectiveStatBox label="Defense" base={data.defense || 0} modifierPct={data.defense_modifier || 0} activeBonusPct={activeEnhancerBonus.defense} />
+                          <EffectiveStatBox label="Speed" base={data.speed || 0} modifierPct={data.speed_modifier || 0} activeBonusPct={activeEnhancerBonus.speed} />
+                          <EffectiveStatBox label="Dexterity" base={data.dexterity || 0} modifierPct={data.dexterity_modifier || 0} activeBonusPct={activeEnhancerBonus.dexterity} />
+                        </div>
+                        {(() => {
+                          const baseTotal = data.total || 0;
+                          const effTotal =
+                            Math.round((data.strength || 0) * (1 + ((data.strength_modifier || 0) + activeEnhancerBonus.strength) / 100)) +
+                            Math.round((data.defense || 0) * (1 + ((data.defense_modifier || 0) + activeEnhancerBonus.defense) / 100)) +
+                            Math.round((data.speed || 0) * (1 + ((data.speed_modifier || 0) + activeEnhancerBonus.speed) / 100)) +
+                            Math.round((data.dexterity || 0) * (1 + ((data.dexterity_modifier || 0) + activeEnhancerBonus.dexterity) / 100));
+                          const totalAffected = effTotal !== baseTotal;
+                          return (
+                            <div className="bg-primary/5 rounded-md p-2 border border-primary/10 flex justify-between items-center mb-3">
+                              <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Total</span>
+                              <div className="flex items-baseline gap-2">
+                                <span className="font-mono font-bold text-sm text-primary">{formatLargeNumber(baseTotal)}</span>
+                                {totalAffected && (
+                                  <>
+                                    <span className="text-muted-foreground text-[10px]">/</span>
+                                    <span className="font-mono font-bold text-sm text-emerald-400">{formatLargeNumber(effTotal)}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        <div className="space-y-1.5 pt-2 border-t border-border/50">
+                          <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">MANUAL</span><span className="font-mono">{formatNumber(data.manual_labor || 0)}</span></div>
+                          <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">INTEL</span><span className="font-mono">{formatNumber(data.intelligence || 0)}</span></div>
+                          <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">ENDUR</span><span className="font-mono">{formatNumber(data.endurance || 0)}</span></div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   {/* EDUCATION */}
                   {panelId === "education" && (
                     <Card className="bg-card shadow-sm">
@@ -656,8 +663,8 @@ export default function Dashboard() {
           </DndContext>
         </div>
 
-        {/* RIGHT COLUMN (NARROWER) */}
-        <div className="space-y-4 lg:col-span-4">
+        {/* COLUMN C: alerts, refills, achievements, selected-stats */}
+        <div className="space-y-4">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd("right")}>
             <SortableContext items={order.right} strategy={verticalListSortingStrategy}>
               {order.right.map((panelId) => (
