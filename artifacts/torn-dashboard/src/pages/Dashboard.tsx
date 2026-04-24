@@ -434,26 +434,6 @@ export default function Dashboard() {
                           </CardContent>
                         </Card>
                       )}
-                      <Card className="bg-card shadow-sm">
-                        <CardHeader className="p-3 pb-0">
-                          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                            <Coins className="w-3.5 h-3.5 text-green-500" />
-                            Wallet
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-3 pt-2">
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Cash</div>
-                              <div className="font-mono text-sm font-bold text-green-400">{formatNumber(data.money_onhand || 0, true)}</div>
-                            </div>
-                            <div>
-                              <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Points</div>
-                              <div className="font-mono text-sm font-bold text-primary">{formatNumber(data.points || 0)}</div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
                     </div>
                   )}
 
@@ -556,6 +536,16 @@ export default function Dashboard() {
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="p-3 pt-2">
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          <div>
+                            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Cash</div>
+                            <div className="font-mono text-sm font-bold text-green-400">{formatNumber(data.money_onhand || 0, true)}</div>
+                          </div>
+                          <div>
+                            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Points</div>
+                            <div className="font-mono text-sm font-bold text-primary">{formatNumber(data.points || 0)}</div>
+                          </div>
+                        </div>
                         <div className="bg-card border border-border/40 rounded-md overflow-hidden mb-3">
                           <div className="flex justify-between items-center p-2 border-b border-border/50 bg-muted/20">
                             <span className="text-[11px] text-muted-foreground font-bold uppercase">Networth</span>
