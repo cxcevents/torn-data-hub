@@ -579,6 +579,12 @@ export default function Dashboard() {
                               <span className="font-mono">{formatLargeNumber(data.networth.items, true)}</span>
                             </div>
                           )}
+                          {data.networth?.stockmarket > 0 && (
+                            <div className="flex justify-between items-center py-1 border-t border-border/30">
+                              <span className="text-muted-foreground uppercase font-bold tracking-wider">Stocks</span>
+                              <span className="font-mono">{formatLargeNumber(data.networth.stockmarket, true)}</span>
+                            </div>
+                          )}
                           {(data.networth as any)?.displaycase > 0 && (
                             <div className="flex justify-between items-center py-1 border-t border-border/30">
                               <span className="text-muted-foreground uppercase font-bold tracking-wider">Display Case</span>
