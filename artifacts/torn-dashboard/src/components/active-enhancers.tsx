@@ -62,19 +62,19 @@ function EnhancerCard({
     <motion.div
       animate={controls}
       initial={{ backgroundColor: "transparent" }}
-      style={{
-        borderRadius: 12,
-        border: enhancer.active
-          ? `1px solid ${enhancer.activeBg.replace(/[\d.]+\)$/, "0.6)")}`
-          : "1px solid rgba(255,255,255,0.07)",
-        boxShadow: enhancer.active
-          ? `0 0 18px ${enhancer.activeBg.replace(/[\d.]+\)$/, "0.35)")}, inset 0 0 12px ${enhancer.activeBg.replace(/[\d.]+\)$/, "0.15)")}`
-          : undefined,
-        opacity: enhancer.active ? 1 : 0.6,
-        overflow: "hidden",
-        position: "relative",
-        transition: "border-color 0.3s, box-shadow 0.3s",
-      }}
+      className={cn(
+        "rounded-xl border overflow-hidden relative transition-[border-color,box-shadow] duration-300",
+        enhancer.active
+          ? "border-border/50 shadow-md"
+          : "border-border/20 opacity-70"
+      )}
+      style={
+        enhancer.active
+          ? {
+              boxShadow: `0 0 14px ${enhancer.activeBg.replace(/[\d.]+\)$/, "0.25)")}`,
+            }
+          : undefined
+      }
     >
       {enhancer.active && (
         <motion.div
