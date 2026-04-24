@@ -348,11 +348,11 @@ export default function Dashboard() {
               </span>
               <button
                 onClick={() => setAgeExpanded(v => !v)}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono hover:text-foreground transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono hover:text-foreground transition-colors cursor-pointer flex-shrink-0"
                 title={ageExpanded ? "Show days" : "Show years/months/days"}
               >
-                <Calendar className="w-3.5 h-3.5" />
-                {formatAge(data.age, ageExpanded)}
+                <Calendar className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="inline-block min-w-[5.5rem] text-left">{formatAge(data.age, ageExpanded)}</span>
               </button>
             </div>
           </div>
