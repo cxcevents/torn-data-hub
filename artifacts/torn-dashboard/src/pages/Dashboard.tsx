@@ -496,7 +496,7 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-3 pt-2 flex-1 flex flex-col">
-                <div className="bg-card border rounded-md overflow-hidden mb-3">
+                <div className="bg-card border border-border/40 rounded-md overflow-hidden mb-3">
                   <div className="flex justify-between items-center p-2 border-b border-border/50 bg-muted/20">
                     <span className="text-[11px] text-muted-foreground font-bold uppercase">Networth</span>
                     <span className="font-mono text-sm font-bold">{formatLargeNumber(data.networth?.total || 0, true)}</span>
