@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useApiKey } from "@/hooks/use-api-key";
 import { useTornUser } from "@/hooks/use-torn-user";
 import { useEnhancerLog } from "@/hooks/use-enhancer-log";
@@ -39,6 +40,49 @@ function EffectiveStatBox({ label, base, modifierPct, activeBonusPct }: { label:
             <span className={cn("text-base font-bold font-mono tracking-tight", buffed ? "text-emerald-400" : "text-destructive")}>
               {formatLargeNumber(effective)}
             </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MeritUpgrades({ merits }: { merits: Record<string, number> | undefined }) {
+  const [onlySet, setOnlySet] = useState(true);
+  const all = merits ? Object.entries(merits) : [];
+  const sorted = [...all].sort((a, b) => (b[1] as number) - (a[1] as number));
+  const filtered = onlySet ? sorted.filter(([, v]) => (v as number) > 0) : sorted;
+  return (
+    <div className="bg-muted/20 border border-border/50 rounded-md p-3">
+      <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <Star className="w-4 h-4 text-primary" />
+          <h4 className="text-xs font-bold uppercase tracking-wider">Merit Upgrades</h4>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOnlySet((v) => !v)}
+          className={cn(
+            "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border transition-colors",
+            onlySet
+              ? "bg-primary/20 border-primary/40 text-primary"
+              : "bg-muted/40 border-border text-muted-foreground hover-elevate"
+          )}
+          title={onlySet ? "Showing only merits you've spent on" : "Showing all merits"}
+        >
+          {onlySet ? "Only Set" : "Show All"}
+        </button>
+      </div>
+      <div className="space-y-1.5 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
+        {filtered.map(([k, v]) => (
+          <div key={k} className="flex justify-between items-center text-[11px]">
+            <span className={cn("truncate mr-2", (v as number) > 0 ? "text-foreground" : "text-muted-foreground/60")}>{k}</span>
+            <span className={cn("font-mono font-medium", (v as number) > 0 ? "text-primary" : "text-muted-foreground/60")}>{v as number}</span>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="text-[11px] text-muted-foreground text-center py-2">
+            {onlySet ? "No merits with points spent" : "None"}
           </div>
         )}
       </div>
@@ -579,7 +623,7 @@ export default function Dashboard() {
               </div>
 
               {jobPointsList.length > 0 && <CompactList title="Job Points" items={jobPointsList} icon={Briefcase} />}
-              <CompactList title="Merit Upgrades" items={meritsList} icon={Star} />
+              <MeritUpgrades merits={data.merits} />
 
             </CardContent>
           </Card>
