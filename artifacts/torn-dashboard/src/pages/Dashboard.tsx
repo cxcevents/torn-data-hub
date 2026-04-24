@@ -9,7 +9,7 @@ import { Onboarding } from "@/components/onboarding";
 import { Link } from "wouter";
 import { 
   AlertCircle, Terminal, Activity, Shield, Swords, Clock, Plane, 
-  GraduationCap, Banknote, Coins, Bell, Calendar, Award, Target,
+  GraduationCap, Banknote, Coins, Bell, Calendar, Award,
   BatteryCharging, Briefcase, Medal, Star, Move
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -379,7 +379,7 @@ export default function Dashboard() {
                   : "text-muted-foreground border-border/40 hover:text-foreground hover:border-border"
               )}
             >
-              <Target className="h-3.5 w-3.5" />
+              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="currentColor"><path d="M8,1a8,8,0,1,0,8,8A8,8,0,0,0,8,1ZM6.47,3.87H9.53l-.77,7.18H7.24ZM8,14.55A1.15,1.15,0,1,1,9.15,13.4,1.14,1.14,0,0,1,8,14.55Z"/></svg>
               Events
               {data.newevents > 0 && (
                 <span className="bg-primary text-primary-foreground text-[9px] px-1 py-0.5 rounded font-bold leading-none">
