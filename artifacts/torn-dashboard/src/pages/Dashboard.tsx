@@ -1,6 +1,8 @@
 import { useApiKey } from "@/hooks/use-api-key";
 import { useTornUser } from "@/hooks/use-torn-user";
+import { useEnhancerLog } from "@/hooks/use-enhancer-log";
 import { ActiveEnhancers } from "@/components/active-enhancers";
+import { ENHANCERS, ENHANCER_DURATION_SECONDS, type StatKey } from "@/lib/enhancers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Onboarding } from "@/components/onboarding";
 import { Link } from "wouter";
@@ -12,6 +14,37 @@ import {
 import { Button } from "@/components/ui/button";
 import { useTick, formatTimeRemaining } from "@/hooks/use-tick";
 import { formatNumber, formatLargeNumber, stripHtml, cn } from "@/lib/utils";
+
+function EffectiveStatBox({ label, base, modifierPct, activeBonusPct }: { label: string, base: number, modifierPct: number, activeBonusPct: number }) {
+  const totalPct = (modifierPct || 0) + (activeBonusPct || 0);
+  const effective = Math.round(base * (1 + totalPct / 100));
+  const affected = totalPct !== 0;
+  const buffed = totalPct > 0;
+  return (
+    <div className="bg-muted/30 rounded-md p-2.5 border border-border/50 flex flex-col justify-between">
+      <div className="flex items-center justify-between text-muted-foreground mb-1">
+        <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
+        {activeBonusPct > 0 && <span className="text-[9px] font-bold text-amber-500 uppercase tracking-wider animate-pulse">BUFFED</span>}
+      </div>
+      <div className={cn("grid gap-2 items-end", affected ? "grid-cols-2" : "grid-cols-1")}>
+        <div className="flex flex-col">
+          {affected && <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70">Base</span>}
+          <span className="text-base font-bold font-mono tracking-tight text-foreground">{formatLargeNumber(base)}</span>
+        </div>
+        {affected && (
+          <div className="flex flex-col items-end">
+            <span className={cn("text-[9px] uppercase tracking-wider", buffed ? "text-emerald-500" : "text-destructive")}>
+              Effective {totalPct > 0 ? "+" : ""}{totalPct}%
+            </span>
+            <span className={cn("text-base font-bold font-mono tracking-tight", buffed ? "text-emerald-400" : "text-destructive")}>
+              {formatLargeNumber(effective)}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 function StatBox({ label, value, icon: Icon, subValue }: { label: string, value: React.ReactNode, icon?: any, subValue?: React.ReactNode }) {
   return (
@@ -83,7 +116,27 @@ function CompactList({ title, items, icon: Icon }: { title: string, items: {labe
 export default function Dashboard() {
   const { apiKey } = useApiKey();
   const { data, isLoading, error, isFetching } = useTornUser(apiKey);
+  const { data: itemUseLog } = useEnhancerLog(apiKey);
   const tick = useTick();
+
+  void tick;
+  const activeEnhancerBonus: Record<StatKey, number> = { strength: 0, defense: 0, speed: 0, dexterity: 0 };
+  if (itemUseLog) {
+    const latestByItem = new Map<number, number>();
+    for (const e of Object.values(itemUseLog)) {
+      const itemId = e?.data?.item;
+      if (typeof itemId !== "number") continue;
+      const prev = latestByItem.get(itemId) ?? 0;
+      if (e.timestamp > prev) latestByItem.set(itemId, e.timestamp);
+    }
+    for (const enh of ENHANCERS) {
+      const ts = latestByItem.get(enh.id);
+      if (!ts) continue;
+      if (Math.floor(Date.now() / 1000) - ts < ENHANCER_DURATION_SECONDS) {
+        activeEnhancerBonus[enh.stat] += enh.bonusPct;
+      }
+    }
+  }
 
   if (!apiKey) {
     return <Onboarding />;
@@ -283,16 +336,35 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-3 pt-2">
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <StatBox label="Strength" value={formatLargeNumber(data.strength || 0)} />
-                  <StatBox label="Defense" value={formatLargeNumber(data.defense || 0)} />
-                  <StatBox label="Speed" value={formatLargeNumber(data.speed || 0)} />
-                  <StatBox label="Dexterity" value={formatLargeNumber(data.dexterity || 0)} />
+                <div className="grid grid-cols-1 gap-2 mb-3">
+                  <EffectiveStatBox label="Strength" base={data.strength || 0} modifierPct={data.strength_modifier || 0} activeBonusPct={activeEnhancerBonus.strength} />
+                  <EffectiveStatBox label="Defense" base={data.defense || 0} modifierPct={data.defense_modifier || 0} activeBonusPct={activeEnhancerBonus.defense} />
+                  <EffectiveStatBox label="Speed" base={data.speed || 0} modifierPct={data.speed_modifier || 0} activeBonusPct={activeEnhancerBonus.speed} />
+                  <EffectiveStatBox label="Dexterity" base={data.dexterity || 0} modifierPct={data.dexterity_modifier || 0} activeBonusPct={activeEnhancerBonus.dexterity} />
                 </div>
-                <div className="bg-primary/5 rounded-md p-2 border border-primary/10 flex justify-between items-center mb-3">
-                  <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Total</span>
-                  <span className="font-mono font-bold text-sm text-primary">{formatLargeNumber(data.total || 0)}</span>
-                </div>
+                {(() => {
+                  const baseTotal = data.total || 0;
+                  const effTotal =
+                    Math.round((data.strength || 0) * (1 + ((data.strength_modifier || 0) + activeEnhancerBonus.strength) / 100)) +
+                    Math.round((data.defense || 0) * (1 + ((data.defense_modifier || 0) + activeEnhancerBonus.defense) / 100)) +
+                    Math.round((data.speed || 0) * (1 + ((data.speed_modifier || 0) + activeEnhancerBonus.speed) / 100)) +
+                    Math.round((data.dexterity || 0) * (1 + ((data.dexterity_modifier || 0) + activeEnhancerBonus.dexterity) / 100));
+                  const totalAffected = effTotal !== baseTotal;
+                  return (
+                    <div className="bg-primary/5 rounded-md p-2 border border-primary/10 flex justify-between items-center mb-3">
+                      <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Total</span>
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-mono font-bold text-sm text-primary">{formatLargeNumber(baseTotal)}</span>
+                        {totalAffected && (
+                          <>
+                            <span className="text-muted-foreground text-[10px]">/</span>
+                            <span className="font-mono font-bold text-sm text-emerald-400">{formatLargeNumber(effTotal)}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="space-y-1.5 pt-2 border-t border-border/50">
                   <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">MANUAL</span><span className="font-mono">{formatNumber(data.manual_labor || 0)}</span></div>
