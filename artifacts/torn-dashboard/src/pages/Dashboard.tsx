@@ -188,7 +188,7 @@ function ProgressBar({
   );
 }
 
-const COMPACT_PANELS = new Set(["vitals-side", "cooldowns"]);
+const COMPACT_PANELS = new Set(["vitals-side", "cooldowns", "stats", "assets", "education"]);
 
 function SortablePanel({ id, locked, children, className }: { id: string; locked: boolean; children: React.ReactNode; className?: string }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: locked });
@@ -498,126 +498,131 @@ export default function Dashboard() {
                     </Card>
                   )}
 
-                  {/* STATS & ASSETS */}
-                  {panelId === "stats-assets" && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* BATTLESTATS & WORKSTATS */}
-            <Card className="bg-card shadow-sm">
-              <CardHeader className="p-3 pb-0">
-                <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Swords className="w-3.5 h-3.5 text-primary" />
-                  Stats
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 pt-2">
-                <div className="grid grid-cols-1 gap-2 mb-3">
-                  <EffectiveStatBox label="Strength" base={data.strength || 0} modifierPct={data.strength_modifier || 0} activeBonusPct={activeEnhancerBonus.strength} />
-                  <EffectiveStatBox label="Defense" base={data.defense || 0} modifierPct={data.defense_modifier || 0} activeBonusPct={activeEnhancerBonus.defense} />
-                  <EffectiveStatBox label="Speed" base={data.speed || 0} modifierPct={data.speed_modifier || 0} activeBonusPct={activeEnhancerBonus.speed} />
-                  <EffectiveStatBox label="Dexterity" base={data.dexterity || 0} modifierPct={data.dexterity_modifier || 0} activeBonusPct={activeEnhancerBonus.dexterity} />
-                </div>
-                {(() => {
-                  const baseTotal = data.total || 0;
-                  const effTotal =
-                    Math.round((data.strength || 0) * (1 + ((data.strength_modifier || 0) + activeEnhancerBonus.strength) / 100)) +
-                    Math.round((data.defense || 0) * (1 + ((data.defense_modifier || 0) + activeEnhancerBonus.defense) / 100)) +
-                    Math.round((data.speed || 0) * (1 + ((data.speed_modifier || 0) + activeEnhancerBonus.speed) / 100)) +
-                    Math.round((data.dexterity || 0) * (1 + ((data.dexterity_modifier || 0) + activeEnhancerBonus.dexterity) / 100));
-                  const totalAffected = effTotal !== baseTotal;
-                  return (
-                    <div className="bg-primary/5 rounded-md p-2 border border-primary/10 flex justify-between items-center mb-3">
-                      <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Total</span>
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-mono font-bold text-sm text-primary">{formatLargeNumber(baseTotal)}</span>
-                        {totalAffected && (
-                          <>
-                            <span className="text-muted-foreground text-[10px]">/</span>
-                            <span className="font-mono font-bold text-sm text-emerald-400">{formatLargeNumber(effTotal)}</span>
-                          </>
+                  {/* BATTLE STATS & WORK STATS */}
+                  {panelId === "stats" && (
+                    <Card className="bg-card shadow-sm">
+                      <CardHeader className="p-3 pb-0">
+                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                          <Swords className="w-3.5 h-3.5 text-primary" />
+                          Stats
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-3 pt-2">
+                        <div className="grid grid-cols-1 gap-2 mb-3">
+                          <EffectiveStatBox label="Strength" base={data.strength || 0} modifierPct={data.strength_modifier || 0} activeBonusPct={activeEnhancerBonus.strength} />
+                          <EffectiveStatBox label="Defense" base={data.defense || 0} modifierPct={data.defense_modifier || 0} activeBonusPct={activeEnhancerBonus.defense} />
+                          <EffectiveStatBox label="Speed" base={data.speed || 0} modifierPct={data.speed_modifier || 0} activeBonusPct={activeEnhancerBonus.speed} />
+                          <EffectiveStatBox label="Dexterity" base={data.dexterity || 0} modifierPct={data.dexterity_modifier || 0} activeBonusPct={activeEnhancerBonus.dexterity} />
+                        </div>
+                        {(() => {
+                          const baseTotal = data.total || 0;
+                          const effTotal =
+                            Math.round((data.strength || 0) * (1 + ((data.strength_modifier || 0) + activeEnhancerBonus.strength) / 100)) +
+                            Math.round((data.defense || 0) * (1 + ((data.defense_modifier || 0) + activeEnhancerBonus.defense) / 100)) +
+                            Math.round((data.speed || 0) * (1 + ((data.speed_modifier || 0) + activeEnhancerBonus.speed) / 100)) +
+                            Math.round((data.dexterity || 0) * (1 + ((data.dexterity_modifier || 0) + activeEnhancerBonus.dexterity) / 100));
+                          const totalAffected = effTotal !== baseTotal;
+                          return (
+                            <div className="bg-primary/5 rounded-md p-2 border border-primary/10 flex justify-between items-center mb-3">
+                              <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Total</span>
+                              <div className="flex items-baseline gap-2">
+                                <span className="font-mono font-bold text-sm text-primary">{formatLargeNumber(baseTotal)}</span>
+                                {totalAffected && (
+                                  <>
+                                    <span className="text-muted-foreground text-[10px]">/</span>
+                                    <span className="font-mono font-bold text-sm text-emerald-400">{formatLargeNumber(effTotal)}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        <div className="space-y-1.5 pt-2 border-t border-border/50">
+                          <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">MANUAL</span><span className="font-mono">{formatNumber(data.manual_labor || 0)}</span></div>
+                          <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">INTEL</span><span className="font-mono">{formatNumber(data.intelligence || 0)}</span></div>
+                          <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">ENDUR</span><span className="font-mono">{formatNumber(data.endurance || 0)}</span></div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* FINANCIALS & NETWORTH */}
+                  {panelId === "assets" && (
+                    <Card className="bg-card shadow-sm">
+                      <CardHeader className="p-3 pb-0">
+                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                          <Banknote className="w-3.5 h-3.5 text-green-500" />
+                          Assets
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-3 pt-2">
+                        <div className="bg-card border border-border/40 rounded-md overflow-hidden mb-3">
+                          <div className="flex justify-between items-center p-2 border-b border-border/50 bg-muted/20">
+                            <span className="text-[11px] text-muted-foreground font-bold uppercase">Networth</span>
+                            <span className="font-mono text-sm font-bold">{formatLargeNumber(data.networth?.total || 0, true)}</span>
+                          </div>
+                          <div className="flex h-1.5 w-full bg-secondary">
+                            <div style={{ width: `${((data.networth?.wallet || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-green-500" title="Wallet" />
+                            <div style={{ width: `${((data.networth?.bank || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-blue-500" title="Bank" />
+                            <div style={{ width: `${((data.networth?.items || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-purple-500" title="Items" />
+                            <div style={{ width: `${((data.networth?.properties || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-orange-500" title="Properties" />
+                            <div style={{ width: `${((data.networth?.stockmarket || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-yellow-500" title="Stocks" />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5 text-[11px]">
+                          <div className="flex justify-between items-center py-1">
+                            <span className="text-muted-foreground uppercase font-bold tracking-wider">Property Vault</span>
+                            <span className="font-mono">{formatNumber(data.vault_amount || 0, true)}</span>
+                          </div>
+                          <div className="flex justify-between items-center py-1 border-t border-border/30">
+                            <span className="text-muted-foreground uppercase font-bold tracking-wider">City Bank</span>
+                            <div className="text-right">
+                              <div className="font-mono">{formatNumber(data.city_bank?.amount || 0, true)}</div>
+                              {data.city_bank?.time_left > 0 && (
+                                <div className="text-[9px] text-muted-foreground">in {formatTimeRemaining(Math.max(0, data.city_bank.time_left - tick))}</div>
+                              )}
+                            </div>
+                          </div>
+                          {data.networth?.items > 0 && (
+                            <div className="flex justify-between items-center py-1 border-t border-border/30">
+                              <span className="text-muted-foreground uppercase font-bold tracking-wider">Items NW</span>
+                              <span className="font-mono">{formatLargeNumber(data.networth.items, true)}</span>
+                            </div>
+                          )}
+                          {(data.networth as any)?.displaycase > 0 && (
+                            <div className="flex justify-between items-center py-1 border-t border-border/30">
+                              <span className="text-muted-foreground uppercase font-bold tracking-wider">Display Case</span>
+                              <span className="font-mono">{formatLargeNumber((data.networth as any).displaycase, true)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* EDUCATION */}
+                  {panelId === "education" && (
+                    <Card className="bg-card shadow-sm">
+                      <CardHeader className="p-3 pb-0">
+                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                          <GraduationCap className="w-3.5 h-3.5 text-primary" />
+                          Education
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-3 pt-2 text-[11px]">
+                        {data.education_current !== 0 ? (
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground truncate">In Progress</span>
+                            <span className="font-mono font-bold text-primary">
+                              {formatTimeRemaining(Math.max(0, (data.education_timeleft || 0) - tick))}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="text-muted-foreground">No active course</div>
                         )}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                <div className="space-y-1.5 pt-2 border-t border-border/50">
-                  <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">MANUAL</span><span className="font-mono">{formatNumber(data.manual_labor || 0)}</span></div>
-                  <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">INTEL</span><span className="font-mono">{formatNumber(data.intelligence || 0)}</span></div>
-                  <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">ENDUR</span><span className="font-mono">{formatNumber(data.endurance || 0)}</span></div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* FINANCIALS & NETWORTH */}
-            <Card className="bg-card shadow-sm flex flex-col">
-              <CardHeader className="p-3 pb-0">
-                <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Banknote className="w-3.5 h-3.5 text-green-500" />
-                  Assets
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 pt-2 flex-1 flex flex-col">
-                <div className="bg-card border border-border/40 rounded-md overflow-hidden mb-3">
-                  <div className="flex justify-between items-center p-2 border-b border-border/50 bg-muted/20">
-                    <span className="text-[11px] text-muted-foreground font-bold uppercase">Networth</span>
-                    <span className="font-mono text-sm font-bold">{formatLargeNumber(data.networth?.total || 0, true)}</span>
-                  </div>
-                  <div className="flex h-1.5 w-full bg-secondary">
-                    <div style={{ width: `${((data.networth?.wallet || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-green-500" title="Wallet" />
-                    <div style={{ width: `${((data.networth?.bank || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-blue-500" title="Bank" />
-                    <div style={{ width: `${((data.networth?.items || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-purple-500" title="Items" />
-                    <div style={{ width: `${((data.networth?.properties || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-orange-500" title="Properties" />
-                    <div style={{ width: `${((data.networth?.stockmarket || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-yellow-500" title="Stocks" />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5 text-[11px]">
-                  <div className="flex justify-between items-center py-1">
-                    <span className="text-muted-foreground uppercase font-bold tracking-wider">Property Vault</span>
-                    <span className="font-mono">{formatNumber(data.vault_amount || 0, true)}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-1 border-t border-border/30">
-                    <span className="text-muted-foreground uppercase font-bold tracking-wider">City Bank</span>
-                    <div className="text-right">
-                      <div className="font-mono">{formatNumber(data.city_bank?.amount || 0, true)}</div>
-                      {data.city_bank?.time_left > 0 && (
-                        <div className="text-[9px] text-muted-foreground">in {formatTimeRemaining(Math.max(0, data.city_bank.time_left - tick))}</div>
-                      )}
-                    </div>
-                  </div>
-                  {data.networth?.items > 0 && (
-                    <div className="flex justify-between items-center py-1 border-t border-border/30">
-                      <span className="text-muted-foreground uppercase font-bold tracking-wider">Items NW</span>
-                      <span className="font-mono">{formatLargeNumber(data.networth.items, true)}</span>
-                    </div>
+                      </CardContent>
+                    </Card>
                   )}
-                  {(data.networth as any)?.displaycase > 0 && (
-                    <div className="flex justify-between items-center py-1 border-t border-border/30">
-                      <span className="text-muted-foreground uppercase font-bold tracking-wider">Display Case</span>
-                      <span className="font-mono">{formatLargeNumber((data.networth as any).displaycase, true)}</span>
-                    </div>
-                  )}
-                </div>
-                
-                {/* EDUCATION MINI */}
-                <div className="mt-auto pt-3 border-t border-border/50">
-                  <div className="flex items-center gap-2 mb-1">
-                    <GraduationCap className="w-3 h-3 text-primary" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Education</span>
-                  </div>
-                  {data.education_current !== 0 ? (
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="text-muted-foreground truncate">In Progress</span>
-                      <span className="font-mono font-bold text-primary">
-                        {formatTimeRemaining(Math.max(0, (data.education_timeleft || 0) - tick))}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="text-[10px] text-muted-foreground">No active course</div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>}
 
                   {/* EVENTS & MESSAGES */}
                   {panelId === "events-messages" && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
