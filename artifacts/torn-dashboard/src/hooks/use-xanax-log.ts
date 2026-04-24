@@ -41,6 +41,12 @@ export function useXanaxLog(apiKey: string | null) {
       if (data.error) throw new Error(data.error.error || "Log API error");
 
       const entries = Object.values(data.log ?? {}) as LogEntry[];
+
+      // Debug: log all entries so we can inspect the exact title/category format
+      const sample = entries.slice(0, 20);
+      console.log("[XanaxLog] total entries:", entries.length);
+      console.log("[XanaxLog] sample entries:", sample.map(e => ({ title: e.title, category: e.category, data: e.data })));
+
       const xanaxEntries = entries.filter(isXanaxEntry);
 
       const dailyCounts: Record<string, number> = {};
