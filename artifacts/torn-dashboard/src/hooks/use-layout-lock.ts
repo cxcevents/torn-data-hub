@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 
 const LOCK_EVENT = "torn_layout_lock_changed";
-const ORDER_KEY = "torn_layout_order_v3";
+const ORDER_KEY = "torn_layout_order_v4";
 
 export type ColumnId = "left" | "right";
 
 const DEFAULT_ORDER: Record<ColumnId, string[]> = {
-  left: ["vitals", "vitals-side", "cooldowns", "stats", "assets", "education", "events-messages"],
+  left: ["vitals", "vitals-side", "cooldowns", "stats", "assets", "education"],
   right: ["alerts", "refills", "achievements", "selected-stats"],
 };
 

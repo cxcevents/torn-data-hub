@@ -9,7 +9,7 @@ import { Onboarding } from "@/components/onboarding";
 import { Link } from "wouter";
 import { 
   AlertCircle, Terminal, Activity, Shield, Swords, Clock, Plane, 
-  GraduationCap, Banknote, Coins, Bell, Mail, Calendar, Target, Award,
+  GraduationCap, Banknote, Coins, Bell, Calendar, Award,
   BatteryCharging, Briefcase, Medal, Star, Move
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -608,56 +608,6 @@ export default function Dashboard() {
                       </CardContent>
                     </Card>
                   )}
-
-                  {/* EVENTS & MESSAGES */}
-                  {panelId === "events-messages" && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="bg-card shadow-sm">
-              <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between">
-                <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Target className="w-3.5 h-3.5 text-primary" />
-                  Events
-                </CardTitle>
-                {data.newevents > 0 && <span className="bg-primary text-primary-foreground text-[9px] px-1.5 py-0.5 rounded font-bold">{data.newevents} NEW</span>}
-              </CardHeader>
-              <CardContent className="p-0 mt-2">
-                <div className="divide-y divide-border/30 max-h-[200px] overflow-y-auto custom-scrollbar border-t border-border/50">
-                  {data.events && Object.values(data.events).slice(0, 10).map((ev: any, i: number) => (
-                    <div key={i} className="p-2.5 text-[11px] hover:bg-muted/30 transition-colors">
-                      <div className="text-[9px] text-muted-foreground font-mono mb-0.5">
-                        {new Date(ev.timestamp * 1000).toLocaleString(undefined, {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
-                      </div>
-                      <div className="leading-tight text-foreground/90">{stripHtml(ev.event)}</div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-card shadow-sm">
-              <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between">
-                <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Mail className="w-3.5 h-3.5 text-primary" />
-                  Messages
-                </CardTitle>
-                {data.newmessages > 0 && <span className="bg-primary text-primary-foreground text-[9px] px-1.5 py-0.5 rounded font-bold">{data.newmessages} NEW</span>}
-              </CardHeader>
-              <CardContent className="p-0 mt-2">
-                <div className="divide-y divide-border/30 max-h-[200px] overflow-y-auto custom-scrollbar border-t border-border/50">
-                  {data.messages && Object.values(data.messages).slice(0, 10).map((msg: any, i: number) => (
-                    <div key={i} className={cn("p-2.5 text-[11px] hover:bg-muted/30 transition-colors", msg.read === 0 && "bg-primary/5 border-l-2 border-primary")}>
-                      <div className="flex justify-between items-start mb-0.5">
-                        <span className="font-bold text-foreground">{msg.name}</span>
-                        <span className="text-[9px] text-muted-foreground font-mono">
-                          {new Date(msg.timestamp * 1000).toLocaleString(undefined, {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'})}
-                        </span>
-                      </div>
-                      <div className="text-muted-foreground truncate">{stripHtml(msg.title)}</div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>}
 
                 </SortablePanel>
               ))}
