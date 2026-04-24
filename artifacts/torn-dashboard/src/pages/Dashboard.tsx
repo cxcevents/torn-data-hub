@@ -322,8 +322,8 @@ export default function Dashboard() {
 
   // Derived Data
   const meritCount = data.merits ? Object.keys(data.merits).length : 0;
-  const perksCount = data.perks ? Object.values(data.perks).reduce((acc: number, curr: any) => acc + (curr ? curr.length : 0), 0) : 0;
-  const medalsCount = data.medals?.medals_awarded?.length || 0;
+  const perksCount = data.perks ? Object.values(data.perks).reduce((acc: number, curr: any) => acc + (Array.isArray(curr) ? curr.length : 0), 0) : 0;
+  const medalsCount = data.medals_awarded?.length || 0;
   
   const meritsList = data.merits ? Object.entries(data.merits).map(([k, v]) => ({ label: k, value: v })) : [];
   

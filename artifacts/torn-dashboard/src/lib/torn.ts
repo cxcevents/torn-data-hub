@@ -46,7 +46,8 @@ export interface TornResponse {
   intelligence?: number;
   endurance?: number;
   jobpoints?: { jobs: Record<string, number>; companies: Record<string, { name: string; jobpoints: number }> };
-  medals?: { medals_awarded: number[]; medals_time: number[] };
+  medals_awarded?: number[];
+  medals_time?: number[];
   merits?: Record<string, number>;
   refills?: { energy_refill_used: boolean; nerve_refill_used: boolean; token_refill_used: boolean; special_refill_used: boolean };
   [key: string]: any;
