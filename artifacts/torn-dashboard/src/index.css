@@ -149,5 +149,6 @@
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    scrollbar-gutter: stable;
   }
 }
