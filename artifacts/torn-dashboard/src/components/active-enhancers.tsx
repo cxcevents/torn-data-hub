@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ENHANCERS, ENHANCER_DURATION_SECONDS, ENHANCER_FLASH_THRESHOLD_SECONDS } from "@/lib/enhancers";
 import { useEnhancerLog } from "@/hooks/use-enhancer-log";
 import { useApiKey } from "@/hooks/use-api-key";
@@ -9,7 +9,9 @@ import { AlertCircle, ChevronDown, RotateCw, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion, useAnimationControls, AnimatePresence } from "framer-motion";
-import { useEffect } from "react";
+
+// Torn booster cooldown duration: 24 hours
+const BOOSTER_COOLDOWN_SECONDS = 86400;
 
 const COLLAPSE_KEY = "torn_enhancers_collapsed";
 
@@ -123,10 +125,10 @@ function EnhancerCard({
   );
 }
 
-export function ActiveEnhancers() {
+export function ActiveEnhancers({ boosterCooldown = 0 }: { boosterCooldown?: number }) {
   const { apiKey } = useApiKey();
-  const { data: logs, isLoading, error, refetch } = useEnhancerLog(apiKey);
-  const tick = useTick();
+  const { data: logData, isLoading, error, refetch } = useEnhancerLog(apiKey);
+  useTick();
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try { return localStorage.getItem(COLLAPSE_KEY) === "1"; } catch { return false; }
@@ -143,25 +145,25 @@ export function ActiveEnhancers() {
   const nowUnix = Math.floor(Date.now() / 1000);
 
   const enhancerStatus = useMemo(() => {
-    if (!logs) return ENHANCERS.map(e => ({ ...e, active: false, lastUsed: 0, expiresAt: 0 }));
-    const logArray = Object.values(logs);
+    // Which enhancer is loaded in the booster slot (from most recent equip event)
+    const lastEquippedBoosterId = logData?.lastEquippedBoosterId ?? null;
+
+    // When was the booster last used?
+    // cooldowns.booster = Unix timestamp when the next booster can be used (now + 86400).
+    // So lastBoosterUsed = cooldowns.booster - 86400.
+    const lastBoosterUsed =
+      boosterCooldown > 0 ? boosterCooldown - BOOSTER_COOLDOWN_SECONDS : 0;
+
     return ENHANCERS.map(enhancer => {
-      const itemLogs = logArray.filter(l => {
-        const d = l.data ?? {};
-        return (
-          d.item === enhancer.id ||
-          d.item_id === enhancer.id ||
-          d.id === enhancer.id ||
-          (typeof l.title === "string" && l.title.toLowerCase().includes(enhancer.name.toLowerCase()))
-        );
-      });
-      let lastUsed = 0;
-      if (itemLogs.length > 0) lastUsed = Math.max(...itemLogs.map(l => l.timestamp));
-      const expiresAt = lastUsed + ENHANCER_DURATION_SECONDS;
-      const active = expiresAt > nowUnix;
+      const isEquipped = enhancer.id === lastEquippedBoosterId;
+      // Only the equipped booster gets a lastUsed time
+      const lastUsed = isEquipped ? lastBoosterUsed : 0;
+      const expiresAt = lastUsed > 0 ? lastUsed + ENHANCER_DURATION_SECONDS : 0;
+      const active = lastUsed > 0 && expiresAt > nowUnix;
       return { ...enhancer, lastUsed, expiresAt, active };
     });
-  }, [logs, nowUnix]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [logData, boosterCooldown, nowUnix]);
 
   const activeCount = enhancerStatus.filter(e => e.active).length;
 

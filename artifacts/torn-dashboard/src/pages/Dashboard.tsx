@@ -941,7 +941,7 @@ export default function Dashboard() {
       </div>
 
       {/* 2. ACTIVE ENHANCERS */}
-      <ActiveEnhancers />
+      <ActiveEnhancers boosterCooldown={data?.cooldowns?.booster ?? 0} />
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
