@@ -643,12 +643,22 @@ export default function Dashboard() {
         <CardContent className="p-3 pt-2 space-y-3">
           {faction?.faction_name ? (
             <>
-              <div>
-                <a href="https://www.torn.com/factions.php?step=your&type=1#/" target="_blank" rel="noreferrer" className="group flex items-center gap-1.5 w-fit">
-                  <span className="text-base font-black text-foreground group-hover:text-primary transition-colors leading-tight">{faction.faction_name}</span>
-                  <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
-                </a>
-                {faction.faction_tag && <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">[{faction.faction_tag}]</span>}
+              <div className="flex items-center gap-2.5">
+                {factionData?.tag_image && (
+                  <img
+                    src={`https://www.torn.com/${factionData.tag_image}`}
+                    alt={faction.faction_tag}
+                    className="w-10 h-10 object-contain flex-shrink-0"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  />
+                )}
+                <div>
+                  <a href="https://www.torn.com/factions.php?step=your&type=1#/" target="_blank" rel="noreferrer" className="group flex items-center gap-1.5 w-fit">
+                    <span className="text-base font-black text-foreground group-hover:text-primary transition-colors leading-tight">{faction.faction_name}</span>
+                    <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+                  </a>
+                  {faction.faction_tag && <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">[{faction.faction_tag}]</span>}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-[11px]">
                 <div className="bg-muted/30 rounded-md p-2 border border-border/40">

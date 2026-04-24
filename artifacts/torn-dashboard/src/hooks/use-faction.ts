@@ -15,6 +15,7 @@ export interface FactionData {
   ID?: number;
   name?: string;
   tag?: string;
+  tag_image?: string;
   respect?: number;
   age?: number;
   capacity?: number;
