@@ -339,7 +339,7 @@ export default function Dashboard() {
       <div className="bg-card border border-border rounded-lg overflow-hidden relative shadow-sm">
         <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
         <div className="p-4 flex flex-col md:flex-row justify-between gap-4">
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3">
             {/* Avatar */}
             <div className="flex-shrink-0 w-14 h-14 rounded-full border-2 border-primary/40 overflow-hidden bg-primary/10 flex items-center justify-center shadow-sm">
               {data.profile_image ? (
