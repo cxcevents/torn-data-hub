@@ -1,0 +1,30 @@
+.options-body { width: auto; max-width: 720px; margin: 0 auto; padding: 24px; }
+.container h1 { font-size: 18px; margin: 0 0 16px 0; letter-spacing: 0.5px; }
+.container h2 { font-size: 12px; text-transform: uppercase; color: var(--muted); margin: 18px 0 6px 0; }
+.hint { font-size: 11px; color: var(--muted); margin: 4px 0 10px 0; }
+.hint a { color: var(--primary); }
+input[type="password"], input[type="url"], select {
+  width: 100%; padding: 8px 10px; background: #16161a;
+  border: 1px solid var(--border); color: var(--text); border-radius: 3px;
+  font: inherit;
+}
+.panels-list {
+  display: flex; flex-direction: column; gap: 4px; background: var(--card);
+  border: 1px solid var(--border); border-radius: 3px; padding: 6px;
+}
+.panel-item {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+  background: #1c1c22; border: 1px solid var(--border); border-radius: 3px;
+}
+.panel-item label { flex: 1; font-size: 12px; }
+.panel-item .order-btns button {
+  background: transparent; border: 1px solid var(--border); color: var(--text);
+  padding: 1px 6px; font-size: 11px; cursor: pointer; border-radius: 2px;
+}
+.panel-item .order-btns button:hover { border-color: var(--primary); color: var(--primary); }
+.actions-bar { margin-top: 24px; display: flex; align-items: center; gap: 12px; }
+button.primary {
+  background: var(--primary); color: #fff; border: none;
+  padding: 8px 18px; border-radius: 3px; font-weight: 700; font-size: 12px; cursor: pointer;
+}
+#status { font-size: 11px; color: var(--life); }

@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Torn Vitals Settings</title>
+    <link rel="stylesheet" href="popup.css" />
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body class="options-body">
+    <div class="container">
+      <h1>Torn Vitals Settings</h1>
+
+      <section>
+        <h2>API Key</h2>
+        <p class="hint">Get a key at <a href="https://www.torn.com/preferences.php#tab=api" target="_blank">torn.com → Preferences → API Key</a>. Limited Access is enough for vitals; Full Access enables every panel.</p>
+        <input id="apiKey" type="password" placeholder="Paste your Torn API key" autocomplete="off" />
+      </section>
+
+      <section>
+        <h2>Toolbar Badge</h2>
+        <p class="hint">What number to show on the extension icon.</p>
+        <select id="badgeMode">
+          <option value="energy">Energy current</option>
+          <option value="messages">Unread messages</option>
+          <option value="events">Unread events</option>
+          <option value="off">Off</option>
+        </select>
+      </section>
+
+      <section>
+        <h2>Popup Panels</h2>
+        <p class="hint">Drag is not supported; toggle which panels appear and in what order.</p>
+        <div id="panels-list" class="panels-list"></div>
+      </section>
+
+      <section>
+        <h2>Full Dashboard URL</h2>
+        <p class="hint">Where the "Open full dashboard" link in the popup goes.</p>
+        <input id="dashboardUrl" type="url" placeholder="https://your-dashboard.example.com" />
+      </section>
+
+      <div class="actions-bar">
+        <button id="save" class="primary">Save</button>
+        <span id="status"></span>
+      </div>
+    </div>
+    <script src="options.js" type="module"></script>
+  </body>
+</html>

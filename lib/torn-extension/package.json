@@ -1,0 +1,6 @@
+{
+  "name": "torn-extension",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Chrome extension that surfaces Torn.com vitals in the toolbar with a customizable popup dashboard."
+}

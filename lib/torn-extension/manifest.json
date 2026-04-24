@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Torn Vitals",
+  "version": "0.1.0",
+  "description": "Live Torn.com vitals in your toolbar, with a customizable popup dashboard.",
+  "permissions": ["storage", "alarms"],
+  "host_permissions": ["https://api.torn.com/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Torn Vitals",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "128": "icons/icon-128.png"
+  }
+}
