@@ -8,6 +8,39 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useLayoutLock } from "@/hooks/use-layout-lock";
 
+function pad(n: number) { return String(n).padStart(2, "0"); }
+
+function formatTime(date: Date, utc: boolean): string {
+  if (utc) {
+    return `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`;
+  }
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+function NavClocks() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="hidden lg:flex items-center gap-4 border-l pl-4 ml-1">
+      <div className="flex items-center gap-1.5">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-primary/70 leading-none">Torn</span>
+        <span className="font-mono text-sm font-semibold tabular-nums text-foreground leading-none">
+          {formatTime(now, true)}
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 leading-none">Local</span>
+        <span className="font-mono text-sm tabular-nums text-muted-foreground leading-none">
+          {formatTime(now, false)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 interface LayoutProps {
   children: React.ReactNode;
 }
@@ -90,6 +123,7 @@ export function Layout({ children }: LayoutProps) {
                 <span>[{data.player_id}]</span>
               </div>
             )}
+            <NavClocks />
           </div>
 
           <div className="flex items-center gap-2 md:gap-4">
