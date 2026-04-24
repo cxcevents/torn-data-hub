@@ -1,31 +1,26 @@
 import { useState, useEffect } from "react";
 
 const LOCK_EVENT = "torn_layout_lock_changed";
-const ORDER_KEY = "torn_layout_order_v6";
+const ORDER_KEY = "torn_layout_order_v7";
 
-export type ColumnId = "left-a" | "left-b" | "right";
+const DEFAULT_ORDER: string[] = [
+  "vitals", "cooldowns", "assets",
+  "vitals-side", "stats", "education",
+  "refills", "achievements", "selected-stats",
+];
 
-const DEFAULT_ORDER: Record<ColumnId, string[]> = {
-  "left-a": ["vitals", "cooldowns", "assets"],
-  "left-b": ["vitals-side", "stats", "education"],
-  right: ["refills", "achievements", "selected-stats"],
-};
-
-function loadOrder(): Record<ColumnId, string[]> {
+function loadOrder(): string[] {
   try {
     const raw = localStorage.getItem(ORDER_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as Record<ColumnId, string[]>;
-      const allDefaultIds = (Object.values(DEFAULT_ORDER) as string[][]).flat();
-      const allSavedIds = (Object.keys(DEFAULT_ORDER) as ColumnId[]).flatMap(col => parsed[col] ?? []);
-      const allPresent = allDefaultIds.every(id => allSavedIds.includes(id));
-      if (allPresent) return parsed;
+      const parsed = JSON.parse(raw) as string[];
+      if (Array.isArray(parsed) && DEFAULT_ORDER.every(id => parsed.includes(id))) return parsed;
     }
   } catch {}
   return DEFAULT_ORDER;
 }
 
-function saveOrder(order: Record<ColumnId, string[]>) {
+function saveOrder(order: string[]) {
   localStorage.setItem(ORDER_KEY, JSON.stringify(order));
 }
 
@@ -33,12 +28,10 @@ let _locked = true;
 
 export function useLayoutLock() {
   const [locked, setLockedState] = useState(_locked);
-  const [order, setOrderState] = useState<Record<ColumnId, string[]>>(loadOrder);
+  const [order, setOrderState] = useState<string[]>(loadOrder);
 
   useEffect(() => {
-    const handler = () => {
-      setLockedState(_locked);
-    };
+    const handler = () => setLockedState(_locked);
     window.addEventListener(LOCK_EVENT, handler);
     return () => window.removeEventListener(LOCK_EVENT, handler);
   }, []);
@@ -48,21 +41,12 @@ export function useLayoutLock() {
     window.dispatchEvent(new Event(LOCK_EVENT));
   };
 
-  const reorder = (column: ColumnId, newOrder: string[]) => {
-    setOrderState(prev => {
-      const updated = { ...prev, [column]: newOrder };
-      saveOrder(updated);
-      return updated;
+  const reorder = (newOrder: string[]) => {
+    setOrderState(() => {
+      saveOrder(newOrder);
+      return newOrder;
     });
   };
 
-  const reorderMultiple = (updates: Partial<Record<ColumnId, string[]>>) => {
-    setOrderState(prev => {
-      const updated = { ...prev, ...updates };
-      saveOrder(updated);
-      return updated;
-    });
-  };
-
-  return { locked, toggleLock, order, reorder, reorderMultiple };
+  return { locked, toggleLock, order, reorder };
 }

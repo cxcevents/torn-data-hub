@@ -17,14 +17,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { useTick, formatTimeRemaining } from "@/hooks/use-tick";
 import { formatNumber, formatLargeNumber, stripHtml, cn } from "@/lib/utils";
-import { useLayoutLock, type ColumnId } from "@/hooks/use-layout-lock";
+import { useLayoutLock } from "@/hooks/use-layout-lock";
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
-  DragOverlay, useDroppable,
+  DragOverlay,
   type DragEndEvent, type DragStartEvent, type UniqueIdentifier,
 } from "@dnd-kit/core";
 import {
-  SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
+  SortableContext, useSortable, rectSortingStrategy, arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -213,14 +213,6 @@ function SortablePanel({ id, locked, children, className }: { id: string; locked
   );
 }
 
-function DroppableColumn({ id, children, className }: { id: string; children: React.ReactNode; className?: string }) {
-  const { setNodeRef, isOver } = useDroppable({ id });
-  return (
-    <div ref={setNodeRef} className={cn("space-y-4 min-h-[100px] rounded-lg transition-colors", isOver && "ring-1 ring-primary/30 bg-primary/5", className)}>
-      {children}
-    </div>
-  );
-}
 
 type CompactSortMode = "value-desc" | "az";
 
@@ -416,23 +408,22 @@ export default function Dashboard() {
   const { data: factionData } = useFaction(apiKey, data?.faction?.faction_id);
   const { computeBonus } = useEnhancerActivations();
   const tick = useTick();
-  const { locked, order, reorder, reorderMultiple } = useLayoutLock();
+  const { locked, order, reorder } = useLayoutLock();
   const [ageExpanded, setAgeExpanded] = useState(false);
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
-  const COL_DROPPABLE: Record<string, ColumnId> = {
-    "drop-left-a": "left-a",
-    "drop-left-b": "left-b",
-    "drop-right": "right",
-  };
-
-  const findColumn = (id: string): ColumnId | null => {
-    for (const col of Object.keys(order) as ColumnId[]) {
-      if (order[col].includes(id)) return col;
-    }
-    return null;
+  const PANEL_LABELS: Record<string, string> = {
+    "vitals": "Vitals",
+    "cooldowns": "Cooldowns",
+    "assets": "Assets",
+    "vitals-side": "Faction",
+    "stats": "Stats",
+    "education": "Education",
+    "refills": "Refills",
+    "achievements": "Achievements",
+    "selected-stats": "Selected Stats",
   };
 
   const handleDragStart = ({ active }: DragStartEvent) => setActiveId(active.id);
@@ -440,26 +431,10 @@ export default function Dashboard() {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
-    if (!over) return;
-    const activeStr = active.id as string;
-    const overStr = over.id as string;
-    if (activeStr === overStr) return;
-    const sourceCol = findColumn(activeStr);
-    if (!sourceCol) return;
-    const targetCol = COL_DROPPABLE[overStr] ?? findColumn(overStr);
-    if (!targetCol) return;
-    if (sourceCol === targetCol) {
-      const items = order[sourceCol];
-      const oldIndex = items.indexOf(activeStr);
-      const newIndex = items.indexOf(overStr);
-      if (oldIndex !== -1 && newIndex !== -1) reorder(sourceCol, arrayMove(items, oldIndex, newIndex));
-    } else {
-      const newSource = order[sourceCol].filter(id => id !== activeStr);
-      const newTarget = [...order[targetCol]];
-      const insertAt = COL_DROPPABLE[overStr] ? newTarget.length : newTarget.indexOf(overStr);
-      newTarget.splice(insertAt >= 0 ? insertAt : newTarget.length, 0, activeStr);
-      reorderMultiple({ [sourceCol]: newSource, [targetCol]: newTarget });
-    }
+    if (!over || active.id === over.id) return;
+    const oldIndex = order.indexOf(active.id as string);
+    const newIndex = order.indexOf(over.id as string);
+    if (oldIndex !== -1 && newIndex !== -1) reorder(arrayMove(order, oldIndex, newIndex));
   };
 
   void tick;
@@ -939,48 +914,34 @@ export default function Dashboard() {
       <ActiveEnhancers />
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* COLUMN A: vitals, cooldowns, assets */}
-        <DroppableColumn id="drop-left-a">
-          <SortableContext items={order["left-a"]} strategy={verticalListSortingStrategy}>
-              {order["left-a"].map((panelId) => (
-                <SortablePanel key={panelId} id={panelId} locked={locked}>
-                  {renderPanel(panelId)}
-                </SortablePanel>
-              ))}
-            </SortableContext>
-        </DroppableColumn>
-
-        {/* COLUMN B: vitals-side, stats, education */}
-        <DroppableColumn id="drop-left-b">
-          <SortableContext items={order["left-b"]} strategy={verticalListSortingStrategy}>
-              {order["left-b"].map((panelId) => (
-                <SortablePanel key={panelId} id={panelId} locked={locked}>
-                  {renderPanel(panelId)}
-                </SortablePanel>
-              ))}
-            </SortableContext>
-        </DroppableColumn>
-
-        {/* COLUMN C: refills, achievements, selected-stats */}
-        <DroppableColumn id="drop-right">
-          <SortableContext items={order.right} strategy={verticalListSortingStrategy}>
-              {order.right.map((panelId) => (
-                <SortablePanel key={panelId} id={panelId} locked={locked}>
-                  {renderPanel(panelId)}
-                </SortablePanel>
-              ))}
-            </SortableContext>
-        </DroppableColumn>
-      </div>
-      <DragOverlay dropAnimation={null}>
-        {activeId ? (
-          <div className="opacity-80 shadow-2xl rounded-xl border-2 border-primary/50 bg-card px-4 py-3 text-xs font-bold uppercase tracking-widest text-primary cursor-grabbing">
-            Moving {String(activeId)}
+        <SortableContext items={order} strategy={rectSortingStrategy}>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {(() => {
+              const colSize = Math.ceil(order.length / 3);
+              const cols = [
+                order.slice(0, colSize),
+                order.slice(colSize, colSize * 2),
+                order.slice(colSize * 2),
+              ];
+              return cols.map((col, colIdx) => (
+                <div key={colIdx} className="space-y-4 min-h-[100px]">
+                  {col.map((panelId) => (
+                    <SortablePanel key={panelId} id={panelId} locked={locked}>
+                      {renderPanel(panelId)}
+                    </SortablePanel>
+                  ))}
+                </div>
+              ));
+            })()}
           </div>
-        ) : null}
-      </DragOverlay>
+        </SortableContext>
+        <DragOverlay dropAnimation={null}>
+          {activeId ? (
+            <div className="opacity-80 shadow-2xl rounded-xl border-2 border-primary/50 bg-card px-4 py-3 text-xs font-bold uppercase tracking-widest text-primary cursor-grabbing">
+              Moving {PANEL_LABELS[String(activeId)] ?? String(activeId)}
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );
