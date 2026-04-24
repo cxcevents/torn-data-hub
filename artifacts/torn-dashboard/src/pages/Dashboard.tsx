@@ -356,16 +356,16 @@ export default function Dashboard() {
               rel="noreferrer"
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider border transition-colors",
-                data.newmessages > 0
+                (data.notifications?.messages > 0 || data.newmessages > 0)
                   ? "bg-primary/15 text-primary border-primary/40"
                   : "text-muted-foreground border-border/40 hover:text-foreground hover:border-border"
               )}
             >
               <svg viewBox="0 0 18 14" className="h-3.5 w-3.5" fill="currentColor"><path d="M9,8,0,1H18ZM4.93,6.7,0,2.85v9Zm8.14,0L18,11.88v-9Zm-1.17.91L9,9.87,6.1,7.61,0,14H18Z"/></svg>
               Messages
-              {data.newmessages > 0 && (
+              {(data.notifications?.messages > 0 || data.newmessages > 0) && (
                 <span className="bg-primary text-primary-foreground text-[9px] px-1 py-0.5 rounded font-bold leading-none">
-                  {data.newmessages}
+                  {data.notifications?.messages || data.newmessages}
                 </span>
               )}
             </a>
@@ -375,16 +375,16 @@ export default function Dashboard() {
               rel="noreferrer"
               className={cn(
                 "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider border transition-colors",
-                data.newevents > 0
+                (data.notifications?.events > 0 || data.newevents > 0)
                   ? "bg-primary/15 text-primary border-primary/40"
                   : "text-muted-foreground border-border/40 hover:text-foreground hover:border-border"
               )}
             >
               <svg viewBox="0 0 16 17" className="h-3.5 w-3.5" fill="currentColor"><path d="M8,1a8,8,0,1,0,8,8A8,8,0,0,0,8,1ZM6.47,3.87H9.53l-.77,7.18H7.24ZM8,14.55A1.15,1.15,0,1,1,9.15,13.4,1.14,1.14,0,0,1,8,14.55Z"/></svg>
               Events
-              {data.newevents > 0 && (
+              {(data.notifications?.events > 0 || data.newevents > 0) && (
                 <span className="bg-primary text-primary-foreground text-[9px] px-1 py-0.5 rounded font-bold leading-none">
-                  {data.newevents}
+                  {data.notifications?.events || data.newevents}
                 </span>
               )}
             </a>
