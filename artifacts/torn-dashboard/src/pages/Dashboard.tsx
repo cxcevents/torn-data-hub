@@ -82,7 +82,7 @@ function MeritUpgrades({ merits }: { merits: Record<string, number> | undefined 
           )}
           title={onlySet ? "Showing only merits you've spent on" : "Showing all merits"}
         >
-          {onlySet ? "Only Set" : "Show All"}
+          {onlySet ? "Only Set" : "Showing All"}
         </button>
       </div>
       <div className="space-y-1.5 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
