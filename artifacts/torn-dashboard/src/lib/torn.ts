@@ -26,6 +26,13 @@ export interface TornResponse {
   education_timeleft?: number;
   education_completed?: number[];
   perks?: any;
+  job_perks?: string[];
+  education_perks?: string[];
+  faction_perks?: string[];
+  property_perks?: string[];
+  stock_perks?: string[];
+  merit_perks?: string[];
+  other_perks?: string[];
   events?: Record<string, { timestamp: number; event: string }>;
   messages?: Record<string, { timestamp: number; name: string; type: string; title: string; seen: number; read: number }>;
   notifications?: { messages: number; events: number; awards: number; competition: number };
