@@ -16,9 +16,9 @@ function loadOrder(): Record<ColumnId, string[]> {
     const raw = localStorage.getItem(ORDER_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Record<ColumnId, string[]>;
-      const allPresent = (Object.keys(DEFAULT_ORDER) as ColumnId[]).every(col =>
-        DEFAULT_ORDER[col].every(id => parsed[col]?.includes(id))
-      );
+      const allDefaultIds = (Object.values(DEFAULT_ORDER) as string[][]).flat();
+      const allSavedIds = (Object.keys(DEFAULT_ORDER) as ColumnId[]).flatMap(col => parsed[col] ?? []);
+      const allPresent = allDefaultIds.every(id => allSavedIds.includes(id));
       if (allPresent) return parsed;
     }
   } catch {}
@@ -49,15 +49,19 @@ export function useLayoutLock() {
   };
 
   const reorder = (column: ColumnId, newOrder: string[]) => {
-    const updated = { ...order, [column]: newOrder };
-    setOrderState(updated);
-    saveOrder(updated);
+    setOrderState(prev => {
+      const updated = { ...prev, [column]: newOrder };
+      saveOrder(updated);
+      return updated;
+    });
   };
 
   const reorderMultiple = (updates: Partial<Record<ColumnId, string[]>>) => {
-    const updated = { ...order, ...updates };
-    setOrderState(updated);
-    saveOrder(updated);
+    setOrderState(prev => {
+      const updated = { ...prev, ...updates };
+      saveOrder(updated);
+      return updated;
+    });
   };
 
   return { locked, toggleLock, order, reorder, reorderMultiple };
