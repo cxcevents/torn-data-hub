@@ -54,5 +54,11 @@ export function useLayoutLock() {
     saveOrder(updated);
   };
 
-  return { locked, toggleLock, order, reorder };
+  const reorderMultiple = (updates: Partial<Record<ColumnId, string[]>>) => {
+    const updated = { ...order, ...updates };
+    setOrderState(updated);
+    saveOrder(updated);
+  };
+
+  return { locked, toggleLock, order, reorder, reorderMultiple };
 }
