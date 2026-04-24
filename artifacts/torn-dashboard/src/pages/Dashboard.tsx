@@ -1,10 +1,10 @@
 import { useState, useCallback } from "react";
 import { useApiKey } from "@/hooks/use-api-key";
 import { useTornUser } from "@/hooks/use-torn-user";
-import { useEnhancerLog } from "@/hooks/use-enhancer-log";
 import { useFaction } from "@/hooks/use-faction";
 import { ActiveEnhancers } from "@/components/active-enhancers";
-import { ENHANCERS, ENHANCER_DURATION_SECONDS, type StatKey } from "@/lib/enhancers";
+import { useEnhancerActivations } from "@/hooks/use-enhancer-activations";
+import { type StatKey } from "@/lib/enhancers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Onboarding } from "@/components/onboarding";
 import { Link } from "wouter";
@@ -413,8 +413,8 @@ function formatAge(days: number, expanded: boolean): string {
 export default function Dashboard() {
   const { apiKey } = useApiKey();
   const { data, isLoading, error, isFetching } = useTornUser(apiKey);
-  const { data: itemUseLog } = useEnhancerLog(apiKey);
   const { data: factionData } = useFaction(apiKey, data?.faction?.faction_id);
+  const { computeBonus } = useEnhancerActivations();
   const tick = useTick();
   const { locked, order, reorder, reorderMultiple } = useLayoutLock();
   const [ageExpanded, setAgeExpanded] = useState(false);
@@ -463,23 +463,8 @@ export default function Dashboard() {
   };
 
   void tick;
-  const activeEnhancerBonus: Record<StatKey, number> = { strength: 0, defense: 0, speed: 0, dexterity: 0 };
-  if (itemUseLog) {
-    const latestByItem = new Map<number, number>();
-    for (const e of Object.values(itemUseLog)) {
-      const itemId = e?.data?.item;
-      if (typeof itemId !== "number") continue;
-      const prev = latestByItem.get(itemId) ?? 0;
-      if (e.timestamp > prev) latestByItem.set(itemId, e.timestamp);
-    }
-    for (const enh of ENHANCERS) {
-      const ts = latestByItem.get(enh.id);
-      if (!ts) continue;
-      if (Math.floor(Date.now() / 1000) - ts < ENHANCER_DURATION_SECONDS) {
-        activeEnhancerBonus[enh.stat] += enh.bonusPct;
-      }
-    }
-  }
+  const nowUnixForBonus = Math.floor(Date.now() / 1000);
+  const activeEnhancerBonus: Record<StatKey, number> = computeBonus(nowUnixForBonus);
 
   if (!apiKey) {
     return <Onboarding />;
@@ -941,7 +926,7 @@ export default function Dashboard() {
       </div>
 
       {/* 2. ACTIVE ENHANCERS */}
-      <ActiveEnhancers boosterCooldown={data?.cooldowns?.booster ?? 0} />
+      <ActiveEnhancers />
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

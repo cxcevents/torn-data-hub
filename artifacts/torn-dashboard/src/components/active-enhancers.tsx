@@ -1,6 +1,7 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { ENHANCERS, ENHANCER_DURATION_SECONDS, ENHANCER_FLASH_THRESHOLD_SECONDS } from "@/lib/enhancers";
 import { useEnhancerLog } from "@/hooks/use-enhancer-log";
+import { useEnhancerActivations } from "@/hooks/use-enhancer-activations";
 import { useApiKey } from "@/hooks/use-api-key";
 import { useTick, formatTimeRemaining } from "@/hooks/use-tick";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,9 +10,6 @@ import { AlertCircle, ChevronDown, RotateCw, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { motion, useAnimationControls, AnimatePresence } from "framer-motion";
-
-// Torn booster cooldown duration: 24 hours
-const BOOSTER_COOLDOWN_SECONDS = 86400;
 
 const COLLAPSE_KEY = "torn_enhancers_collapsed";
 
@@ -30,11 +28,13 @@ function EnhancerCard({
   timeRemaining,
   percentage,
   secondsAgo,
+  onActivate,
 }: {
   enhancer: typeof ENHANCERS[number] & { active: boolean; lastUsed: number; expiresAt: number };
   timeRemaining: number;
   percentage: number;
   secondsAgo: number;
+  onActivate: () => void;
 }) {
   const isFlashing = enhancer.active && timeRemaining <= ENHANCER_FLASH_THRESHOLD_SECONDS;
   const controls = useAnimationControls();
@@ -101,7 +101,15 @@ function EnhancerCard({
                 {formatTimeRemaining(timeRemaining)}
               </motion.div>
             ) : (
-              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Inactive</div>
+              <button
+                onClick={onActivate}
+                className={cn(
+                  "text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded border transition-colors",
+                  "border-border/30 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5"
+                )}
+              >
+                Used
+              </button>
             )}
           </div>
         </div>
@@ -117,7 +125,7 @@ function EnhancerCard({
           </div>
         ) : (
           <div className="mt-3 text-[10px] text-muted-foreground">
-            {enhancer.lastUsed > 0 ? `Last used: ${formatRelativeTime(secondsAgo)}` : "Never used"}
+            {enhancer.lastUsed > 0 ? `Last used: ${formatRelativeTime(secondsAgo)}` : "Tap 'Used' after you take it"}
           </div>
         )}
       </CardContent>
@@ -125,9 +133,10 @@ function EnhancerCard({
   );
 }
 
-export function ActiveEnhancers({ boosterCooldown = 0 }: { boosterCooldown?: number }) {
+export function ActiveEnhancers() {
   const { apiKey } = useApiKey();
   const { data: logData, isLoading, error, refetch } = useEnhancerLog(apiKey);
+  const { activations, activate } = useEnhancerActivations();
   useTick();
 
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -145,25 +154,14 @@ export function ActiveEnhancers({ boosterCooldown = 0 }: { boosterCooldown?: num
   const nowUnix = Math.floor(Date.now() / 1000);
 
   const enhancerStatus = useMemo(() => {
-    // Which enhancer is loaded in the booster slot (from most recent equip event)
-    const lastEquippedBoosterId = logData?.lastEquippedBoosterId ?? null;
-
-    // When was the booster last used?
-    // cooldowns.booster = Unix timestamp when the next booster can be used (now + 86400).
-    // So lastBoosterUsed = cooldowns.booster - 86400.
-    const lastBoosterUsed =
-      boosterCooldown > 0 ? boosterCooldown - BOOSTER_COOLDOWN_SECONDS : 0;
-
     return ENHANCERS.map(enhancer => {
-      const isEquipped = enhancer.id === lastEquippedBoosterId;
-      // Only the equipped booster gets a lastUsed time
-      const lastUsed = isEquipped ? lastBoosterUsed : 0;
+      const lastUsed = activations[enhancer.id] ?? 0;
       const expiresAt = lastUsed > 0 ? lastUsed + ENHANCER_DURATION_SECONDS : 0;
       const active = lastUsed > 0 && expiresAt > nowUnix;
       return { ...enhancer, lastUsed, expiresAt, active };
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [logData, boosterCooldown, nowUnix]);
+  }, [activations, nowUnix]);
 
   const activeCount = enhancerStatus.filter(e => e.active).length;
 
@@ -174,8 +172,8 @@ export function ActiveEnhancers({ boosterCooldown = 0 }: { boosterCooldown?: num
           <div className="flex items-center gap-3 text-destructive">
             <AlertCircle className="w-5 h-5 flex-shrink-0" />
             <div className="text-sm">
-              <span className="font-bold">Active Enhancer detection requires log access.</span>{" "}
-              Generate a Limited or Full key at torn.com → Preferences → API Key.
+              <span className="font-bold">Enhancer log unavailable.</span>{" "}
+              Check your API key permissions at torn.com → Preferences → API Key.
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={() => refetch()} className="flex-shrink-0 border-destructive/30 hover:bg-destructive/10 text-destructive">
@@ -240,6 +238,7 @@ export function ActiveEnhancers({ boosterCooldown = 0 }: { boosterCooldown?: num
                         timeRemaining={timeRemaining}
                         percentage={percentage}
                         secondsAgo={secondsAgo}
+                        onActivate={() => activate(enhancer.id)}
                       />
                     );
                   })
