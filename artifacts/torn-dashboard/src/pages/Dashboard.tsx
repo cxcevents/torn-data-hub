@@ -555,22 +555,22 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="p-3 pt-0">
               <div className="grid grid-cols-4 gap-1.5 text-center">
-                <div className="bg-muted/50 rounded py-1.5 border border-border/50">
+                <a href="https://www.torn.com/messages.php" target="_blank" rel="noreferrer" className="bg-muted/50 rounded py-1.5 border border-border/50 hover-elevate">
                   <div className="text-[9px] font-bold text-muted-foreground uppercase">Messages</div>
                   <div className={cn("font-mono text-sm font-bold", data.notifications?.messages > 0 ? "text-primary" : "text-foreground")}>{data.notifications?.messages || 0}</div>
-                </div>
-                <div className="bg-muted/50 rounded py-1.5 border border-border/50">
+                </a>
+                <a href="https://www.torn.com/events.php" target="_blank" rel="noreferrer" className="bg-muted/50 rounded py-1.5 border border-border/50 hover-elevate">
                   <div className="text-[9px] font-bold text-muted-foreground uppercase">Events</div>
                   <div className={cn("font-mono text-sm font-bold", data.notifications?.events > 0 ? "text-primary" : "text-foreground")}>{data.notifications?.events || 0}</div>
-                </div>
-                <div className="bg-muted/50 rounded py-1.5 border border-border/50">
+                </a>
+                <a href="https://www.torn.com/awards.php" target="_blank" rel="noreferrer" className="bg-muted/50 rounded py-1.5 border border-border/50 hover-elevate">
                   <div className="text-[9px] font-bold text-muted-foreground uppercase">Awards</div>
                   <div className={cn("font-mono text-sm font-bold", data.notifications?.awards > 0 ? "text-yellow-500" : "text-foreground")}>{data.notifications?.awards || 0}</div>
-                </div>
-                <div className="bg-muted/50 rounded py-1.5 border border-border/50">
+                </a>
+                <a href="https://www.torn.com/competition.php" target="_blank" rel="noreferrer" className="bg-muted/50 rounded py-1.5 border border-border/50 hover-elevate">
                   <div className="text-[9px] font-bold text-muted-foreground uppercase">Comps</div>
                   <div className="font-mono text-sm font-bold text-foreground">{data.notifications?.competition || 0}</div>
-                </div>
+                </a>
               </div>
             </CardContent>
           </Card>
