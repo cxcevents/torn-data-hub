@@ -541,7 +541,7 @@ export default function Dashboard() {
         <CardContent className="p-3 pt-3 space-y-3">
           {data.life && <ProgressBar label="Life" current={data.life.current} max={data.life.maximum} timeRemainingSeconds={data.life.fulltime} tick={tick} colorClass="bg-blue-500" />}
           {data.energy && <ProgressBar label="Energy" current={data.energy.current} max={data.energy.maximum} timeRemainingSeconds={data.energy.fulltime} tick={tick} colorClass="bg-green-500" flashWhenFull actionHref="https://www.torn.com/gym.php" actionLabel="Train" actionInline />}
-          {data.nerve && <ProgressBar label="Nerve" current={data.nerve.current} max={data.nerve.maximum} timeRemainingSeconds={data.nerve.fulltime} tick={tick} colorClass="bg-red-500" flashWhenFull actionHref="https://www.torn.com/crimes.php" actionLabel="Crimes" actionInline />}
+          {data.nerve && <ProgressBar label="Nerve" current={data.nerve.current} max={data.nerve.maximum} timeRemainingSeconds={data.nerve.fulltime} tick={tick} colorClass="bg-red-500" flashWhenFull actionHref="https://www.torn.com/crimes.php" actionLabel="Commit Crimes" actionInline />}
           {data.happy && <ProgressBar label="Happy" current={data.happy.current} max={data.happy.maximum} timeRemainingSeconds={data.happy.fulltime} tick={tick} colorClass="bg-yellow-500" />}
         </CardContent>
       </Card>
