@@ -559,39 +559,28 @@ export default function Dashboard() {
                             <div style={{ width: `${((data.networth?.stockmarket || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-yellow-500" title="Stocks" />
                           </div>
                         </div>
-                        <div className="space-y-1.5 text-[11px]">
-                          <div className="flex justify-between items-center py-1">
-                            <span className="text-muted-foreground uppercase font-bold tracking-wider">Property Vault</span>
-                            <span className="font-mono">{formatNumber(data.vault_amount || 0, true)}</span>
-                          </div>
-                          <div className="flex justify-between items-center py-1 border-t border-border/30">
-                            <span className="text-muted-foreground uppercase font-bold tracking-wider">City Bank</span>
-                            <div className="text-right">
-                              <div className="font-mono">{formatNumber(data.city_bank?.amount || 0, true)}</div>
-                              {data.city_bank?.time_left > 0 && (
-                                <div className="text-[9px] text-muted-foreground">in {formatTimeRemaining(Math.max(0, data.city_bank.time_left - tick))}</div>
-                              )}
+                        {(() => {
+                          const entries = [
+                            { label: "Property Vault", value: data.vault_amount || 0, sub: null },
+                            { label: "City Bank", value: data.city_bank?.amount || 0, sub: data.city_bank?.time_left > 0 ? `in ${formatTimeRemaining(Math.max(0, data.city_bank.time_left - tick))}` : null },
+                            ...(data.networth?.items > 0 ? [{ label: "Items", value: data.networth.items, sub: null }] : []),
+                            ...(data.networth?.stockmarket > 0 ? [{ label: "Stocks", value: data.networth.stockmarket, sub: null }] : []),
+                            ...((data.networth as any)?.displaycase > 0 ? [{ label: "Display Case", value: (data.networth as any).displaycase, sub: null }] : []),
+                          ].sort((a, b) => b.value - a.value);
+                          return (
+                            <div className="space-y-1.5 text-[11px]">
+                              {entries.map((entry, i) => (
+                                <div key={entry.label} className={cn("flex justify-between items-center py-1", i > 0 && "border-t border-border/30")}>
+                                  <span className="text-muted-foreground uppercase font-bold tracking-wider">{entry.label}</span>
+                                  <div className="text-right">
+                                    <div className="font-mono">{formatLargeNumber(entry.value, true)}</div>
+                                    {entry.sub && <div className="text-[9px] text-muted-foreground">{entry.sub}</div>}
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                          </div>
-                          {data.networth?.items > 0 && (
-                            <div className="flex justify-between items-center py-1 border-t border-border/30">
-                              <span className="text-muted-foreground uppercase font-bold tracking-wider">Items</span>
-                              <span className="font-mono">{formatLargeNumber(data.networth.items, true)}</span>
-                            </div>
-                          )}
-                          {data.networth?.stockmarket > 0 && (
-                            <div className="flex justify-between items-center py-1 border-t border-border/30">
-                              <span className="text-muted-foreground uppercase font-bold tracking-wider">Stocks</span>
-                              <span className="font-mono">{formatLargeNumber(data.networth.stockmarket, true)}</span>
-                            </div>
-                          )}
-                          {(data.networth as any)?.displaycase > 0 && (
-                            <div className="flex justify-between items-center py-1 border-t border-border/30">
-                              <span className="text-muted-foreground uppercase font-bold tracking-wider">Display Case</span>
-                              <span className="font-mono">{formatLargeNumber((data.networth as any).displaycase, true)}</span>
-                            </div>
-                          )}
-                        </div>
+                          );
+                        })()}
                       </CardContent>
                     </Card>
                   )}
