@@ -284,20 +284,20 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="p-3 pt-2">
                 <div className="grid grid-cols-2 gap-2 mb-3">
-                  <StatBox label="Strength" value={formatLargeNumber(data.battlestats?.strength || 0)} />
-                  <StatBox label="Defense" value={formatLargeNumber(data.battlestats?.defense || 0)} />
-                  <StatBox label="Speed" value={formatLargeNumber(data.battlestats?.speed || 0)} />
-                  <StatBox label="Dexterity" value={formatLargeNumber(data.battlestats?.dexterity || 0)} />
+                  <StatBox label="Strength" value={formatLargeNumber(data.strength || 0)} />
+                  <StatBox label="Defense" value={formatLargeNumber(data.defense || 0)} />
+                  <StatBox label="Speed" value={formatLargeNumber(data.speed || 0)} />
+                  <StatBox label="Dexterity" value={formatLargeNumber(data.dexterity || 0)} />
                 </div>
                 <div className="bg-primary/5 rounded-md p-2 border border-primary/10 flex justify-between items-center mb-3">
                   <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Total</span>
-                  <span className="font-mono font-bold text-sm text-primary">{formatLargeNumber(data.battlestats?.total || 0)}</span>
+                  <span className="font-mono font-bold text-sm text-primary">{formatLargeNumber(data.total || 0)}</span>
                 </div>
 
                 <div className="space-y-1.5 pt-2 border-t border-border/50">
-                  <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">MANUAL</span><span className="font-mono">{formatNumber(data.workstats?.manual_labor || 0)}</span></div>
-                  <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">INTEL</span><span className="font-mono">{formatNumber(data.workstats?.intelligence || 0)}</span></div>
-                  <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">ENDUR</span><span className="font-mono">{formatNumber(data.workstats?.endurance || 0)}</span></div>
+                  <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">MANUAL</span><span className="font-mono">{formatNumber(data.manual_labor || 0)}</span></div>
+                  <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">INTEL</span><span className="font-mono">{formatNumber(data.intelligence || 0)}</span></div>
+                  <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">ENDUR</span><span className="font-mono">{formatNumber(data.endurance || 0)}</span></div>
                 </div>
               </CardContent>
             </Card>
