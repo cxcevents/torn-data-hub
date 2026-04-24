@@ -532,6 +532,307 @@ export default function Dashboard() {
     jobPointsList = Object.values(data.jobpoints.companies).map((c: any) => ({ label: c.name, value: c.jobpoints }));
   }
 
+  const faction = data.faction;
+  const rankedWars = factionData?.ranked_wars ? Object.values(factionData.ranked_wars) : [];
+  const activeWar = rankedWars.find(w => w.war.end === 0);
+  const myFactionId = faction?.faction_id ? String(faction.faction_id) : null;
+  const myScore = activeWar && myFactionId ? activeWar.factions[myFactionId]?.score : null;
+  const opponentEntry = activeWar && myFactionId
+    ? Object.entries(activeWar.factions).find(([id]) => id !== myFactionId)
+    : null;
+  const opponentScore = opponentEntry?.[1]?.score;
+  const opponentName = opponentEntry?.[1]?.name;
+  const memberCount = factionData?.members ? Object.keys(factionData.members).length : null;
+
+  const renderPanel = (panelId: string) => {
+    if (panelId === "vitals") return (
+      <Card className="bg-card shadow-sm">
+        <CardHeader className="p-3 pb-0">
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <Activity className="w-3.5 h-3.5 text-primary" />
+            Vitals
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-3 space-y-3">
+          {data.life && <ProgressBar label="Life" current={data.life.current} max={data.life.maximum} timeRemainingSeconds={data.life.fulltime} tick={tick} colorClass="bg-blue-500" />}
+          {data.energy && <ProgressBar label="Energy" current={data.energy.current} max={data.energy.maximum} timeRemainingSeconds={data.energy.fulltime} tick={tick} colorClass="bg-green-500" flashWhenFull actionHref="https://www.torn.com/gym.php" actionLabel="Train" actionInline />}
+          {data.nerve && <ProgressBar label="Nerve" current={data.nerve.current} max={data.nerve.maximum} timeRemainingSeconds={data.nerve.fulltime} tick={tick} colorClass="bg-red-500" flashWhenFull actionHref="https://www.torn.com/crimes.php" actionLabel="Commit Crime" actionInline />}
+          {data.happy && <ProgressBar label="Happy" current={data.happy.current} max={data.happy.maximum} timeRemainingSeconds={data.happy.fulltime} tick={tick} colorClass="bg-yellow-500" />}
+        </CardContent>
+      </Card>
+    );
+    if (panelId === "cooldowns") return (
+      <Card className="bg-card shadow-sm">
+        <CardHeader className="p-3 pb-0">
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <Clock className="w-3.5 h-3.5 text-primary" />
+            Cooldowns
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-2 text-[11px] space-y-1">
+          {[
+            { label: "Drug", val: data.cooldowns?.drug, readyHref: "https://www.torn.com/item.php#drugs-items", readyLabel: "Use Drug" },
+            { label: "Medical", val: data.cooldowns?.medical },
+            { label: "Booster", val: data.cooldowns?.booster }
+          ].map(cd => {
+            const remaining = Math.max(0, (cd.val || 0) - tick);
+            const isReady = remaining <= 0;
+            return (
+              <div key={cd.label} className="flex justify-between items-center">
+                <span className="text-muted-foreground font-bold uppercase tracking-wider">{cd.label}</span>
+                {isReady && cd.readyHref
+                  ? <a href={cd.readyHref} target="_blank" rel="noreferrer" className="font-bold text-[9px] uppercase tracking-widest px-2 py-0.5 rounded border border-yellow-500/40 bg-yellow-500/10 text-yellow-400 animate-pulse hover:opacity-80 transition-opacity">{cd.readyLabel}</a>
+                  : <span className={cn("font-mono font-bold", isReady ? "text-muted-foreground opacity-50" : "text-yellow-500")}>{isReady ? "RDY" : formatTimeRemaining(remaining)}</span>
+                }
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+    );
+    if (panelId === "assets") return (
+      <Card className="bg-card shadow-sm">
+        <CardHeader className="p-3 pb-0">
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <Banknote className="w-3.5 h-3.5 text-green-500" />
+            Assets
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-2">
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div>
+              <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Cash</div>
+              <div className="font-mono text-sm font-bold text-green-400">{formatNumber(data.money_onhand || 0, true)}</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Points</div>
+              <div className="font-mono text-sm font-bold text-primary">{formatNumber(data.points || 0)}</div>
+            </div>
+          </div>
+          <div className="bg-card border border-border/40 rounded-md overflow-hidden mb-3">
+            <div className="flex justify-between items-center p-2 border-b border-border/50 bg-muted/20">
+              <span className="text-[11px] text-muted-foreground font-bold uppercase">Networth</span>
+              <span className="font-mono text-sm font-bold">{formatLargeNumber(data.networth?.total || 0, true)}</span>
+            </div>
+            <div className="flex h-1.5 w-full bg-secondary">
+              <div style={{ width: `${((data.networth?.wallet || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-green-500" title="Wallet" />
+              <div style={{ width: `${((data.networth?.bank || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-blue-500" title="Bank" />
+              <div style={{ width: `${((data.networth?.items || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-purple-500" title="Items" />
+              <div style={{ width: `${((data.networth?.properties || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-orange-500" title="Properties" />
+              <div style={{ width: `${((data.networth?.stockmarket || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-yellow-500" title="Stocks" />
+            </div>
+          </div>
+          {(() => {
+            const entries = [
+              { label: "Property Vault", value: data.vault_amount || 0, sub: null },
+              { label: "City Bank", value: data.city_bank?.amount || 0, sub: data.city_bank?.time_left > 0 ? `in ${formatTimeRemaining(Math.max(0, data.city_bank.time_left - tick))}` : null },
+              ...(data.networth?.items > 0 ? [{ label: "Items", value: data.networth.items, sub: null }] : []),
+              ...(data.networth?.stockmarket > 0 ? [{ label: "Stocks", value: data.networth.stockmarket, sub: null }] : []),
+              ...((data.networth as any)?.displaycase > 0 ? [{ label: "Display Case", value: (data.networth as any).displaycase, sub: null }] : []),
+            ].sort((a, b) => b.value - a.value);
+            return (
+              <div className="space-y-1.5 text-[11px]">
+                {entries.map((entry, i) => (
+                  <div key={entry.label} className={cn("flex justify-between items-center py-1", i > 0 && "border-t border-border/30")}>
+                    <span className="text-muted-foreground uppercase font-bold tracking-wider">{entry.label}</span>
+                    <div className="text-right">
+                      <div className="font-mono">{formatLargeNumber(entry.value, true)}</div>
+                      {entry.sub && <div className="text-[9px] text-muted-foreground">{entry.sub}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </CardContent>
+      </Card>
+    );
+    if (panelId === "vitals-side") return (
+      <Card className="bg-card shadow-sm">
+        <CardHeader className="p-3 pb-0">
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <Shield className="w-3.5 h-3.5 text-primary" />
+            Faction
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-2 space-y-3">
+          {faction?.faction_name ? (
+            <>
+              <div>
+                <a href="https://www.torn.com/factions.php?step=your&type=1#/" target="_blank" rel="noreferrer" className="group flex items-center gap-1.5 w-fit">
+                  <span className="text-base font-black text-foreground group-hover:text-primary transition-colors leading-tight">{faction.faction_name}</span>
+                  <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+                </a>
+                {faction.faction_tag && <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">[{faction.faction_tag}]</span>}
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="bg-muted/30 rounded-md p-2 border border-border/40">
+                  <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Position</div>
+                  <div className="font-bold text-foreground truncate">{faction.position}</div>
+                </div>
+                <div className="bg-muted/30 rounded-md p-2 border border-border/40">
+                  <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Days In</div>
+                  <div className="font-mono font-bold text-foreground">{faction.days_in_faction.toLocaleString()}</div>
+                </div>
+                {memberCount !== null && (
+                  <div className="bg-muted/30 rounded-md p-2 border border-border/40">
+                    <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Members</div>
+                    <div className="font-mono font-bold text-foreground">{memberCount}</div>
+                  </div>
+                )}
+                {factionData?.respect !== undefined && (
+                  <div className="bg-muted/30 rounded-md p-2 border border-border/40">
+                    <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Respect</div>
+                    <div className="font-mono font-bold text-foreground">{formatLargeNumber(factionData.respect)}</div>
+                  </div>
+                )}
+              </div>
+              {activeWar && (
+                <div className="rounded-md border border-red-500/30 bg-red-500/5 p-2.5 space-y-1.5">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Swords className="w-3 h-3 text-red-400" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-red-400">Ranked War</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="font-bold text-foreground truncate max-w-[55%]">{faction.faction_name}</span>
+                    <span className="font-mono font-bold text-green-400">{myScore ?? "—"}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-muted-foreground truncate max-w-[55%]">{opponentName ?? "Opponent"}</span>
+                    <span className="font-mono font-bold text-red-400">{opponentScore ?? "—"}</span>
+                  </div>
+                </div>
+              )}
+              {data.chain && data.chain.current > 0 && (
+                <div className="rounded-md border border-purple-500/20 bg-purple-500/5 p-2">
+                  <ProgressBar label={`Chain (x${data.chain.modifier})`} current={data.chain.current} max={data.chain.maximum} timeRemainingSeconds={data.chain.timeout} tick={tick} colorClass="bg-purple-500" />
+                </div>
+              )}
+              {data.travel && data.travel.time_left > 0 && (
+                <div className="flex justify-between items-center rounded-md border border-blue-500/20 bg-blue-500/5 p-2">
+                  <div className="flex items-center gap-2">
+                    <Plane className="w-3.5 h-3.5 text-blue-400" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400">To {data.travel.destination}</span>
+                  </div>
+                  <span className="font-mono text-sm font-bold text-blue-400">{formatTimeRemaining(Math.max(0, data.travel.time_left - tick))}</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-[11px] text-muted-foreground">No faction</div>
+          )}
+        </CardContent>
+      </Card>
+    );
+    if (panelId === "stats") return (
+      <Card className="bg-card shadow-sm">
+        <CardHeader className="p-3 pb-0">
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <Swords className="w-3.5 h-3.5 text-primary" />
+            Stats
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-2">
+          <div className="grid grid-cols-1 gap-2 mb-3">
+            <EffectiveStatBox label="Strength" base={data.strength || 0} modifierPct={data.strength_modifier || 0} activeBonusPct={activeEnhancerBonus.strength} />
+            <EffectiveStatBox label="Defense" base={data.defense || 0} modifierPct={data.defense_modifier || 0} activeBonusPct={activeEnhancerBonus.defense} />
+            <EffectiveStatBox label="Speed" base={data.speed || 0} modifierPct={data.speed_modifier || 0} activeBonusPct={activeEnhancerBonus.speed} />
+            <EffectiveStatBox label="Dexterity" base={data.dexterity || 0} modifierPct={data.dexterity_modifier || 0} activeBonusPct={activeEnhancerBonus.dexterity} />
+          </div>
+          {(() => {
+            const baseTotal = data.total || 0;
+            const effTotal =
+              Math.round((data.strength || 0) * (1 + ((data.strength_modifier || 0) + activeEnhancerBonus.strength) / 100)) +
+              Math.round((data.defense || 0) * (1 + ((data.defense_modifier || 0) + activeEnhancerBonus.defense) / 100)) +
+              Math.round((data.speed || 0) * (1 + ((data.speed_modifier || 0) + activeEnhancerBonus.speed) / 100)) +
+              Math.round((data.dexterity || 0) * (1 + ((data.dexterity_modifier || 0) + activeEnhancerBonus.dexterity) / 100));
+            const totalAffected = effTotal !== baseTotal;
+            return (
+              <div className="bg-primary/5 rounded-md p-2 border border-primary/10 flex justify-between items-center mb-3">
+                <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Total</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-mono font-bold text-sm text-primary">{formatLargeNumber(baseTotal)}</span>
+                  {totalAffected && (<><span className="text-muted-foreground text-[10px]">/</span><span className="font-mono font-bold text-sm text-emerald-400">{formatLargeNumber(effTotal)}</span></>)}
+                </div>
+              </div>
+            );
+          })()}
+          <div className="space-y-1.5 pt-2 border-t border-border/50">
+            <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">MANUAL</span><span className="font-mono">{formatNumber(data.manual_labor || 0)}</span></div>
+            <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">INTEL</span><span className="font-mono">{formatNumber(data.intelligence || 0)}</span></div>
+            <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">ENDUR</span><span className="font-mono">{formatNumber(data.endurance || 0)}</span></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+    if (panelId === "education") return (
+      <Card className="bg-card shadow-sm">
+        <CardHeader className="p-3 pb-0">
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <GraduationCap className="w-3.5 h-3.5 text-primary" />
+            Education
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-2 text-[11px]">
+          {data.education_current !== 0 ? (
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground truncate">In Progress</span>
+              <span className="font-mono font-bold text-primary">{formatTimeRemaining(Math.max(0, (data.education_timeleft || 0) - tick))}</span>
+            </div>
+          ) : (
+            <div className="text-muted-foreground">No active course</div>
+          )}
+        </CardContent>
+      </Card>
+    );
+    if (panelId === "refills") return (
+      <Card className="bg-card shadow-sm">
+        <CardHeader className="p-3 pb-2">
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <BatteryCharging className="w-3.5 h-3.5 text-primary" />
+            Refills Available Today
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-0">
+          <div className="flex gap-2">
+            <a href="https://www.torn.com/points.php" target="_blank" rel="noreferrer" className={cn("flex-1 text-center py-2 rounded text-[10px] font-bold uppercase border cursor-pointer transition-colors", !data.refills?.energy_refill_used ? "bg-green-500/20 text-green-400 border-green-500/40 shadow-[0_0_10px_rgba(34,197,94,0.25)] animate-pulse" : "bg-muted/20 text-muted-foreground/40 border-border/30 line-through")}>Energy</a>
+            <a href="https://www.torn.com/points.php" target="_blank" rel="noreferrer" className={cn("flex-1 text-center py-2 rounded text-[10px] font-bold uppercase border cursor-pointer transition-colors", !data.refills?.nerve_refill_used ? "bg-red-500/20 text-red-400 border-red-500/40 shadow-[0_0_10px_rgba(239,68,68,0.25)] animate-pulse" : "bg-muted/20 text-muted-foreground/40 border-border/30 line-through")}>Nerve</a>
+            <a href="https://www.torn.com/points.php" target="_blank" rel="noreferrer" className={cn("flex-1 text-center py-2 rounded text-[10px] font-bold uppercase border cursor-pointer transition-colors", !data.refills?.token_refill_used ? "bg-zinc-500/20 text-zinc-300 border-zinc-500/40" : "bg-muted/20 text-muted-foreground/40 border-border/30 line-through")}>Casino</a>
+          </div>
+        </CardContent>
+      </Card>
+    );
+    if (panelId === "achievements") return (
+      <Card className="bg-card shadow-sm">
+        <CardHeader className="p-3 pb-2">
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+            <Award className="w-3.5 h-3.5 text-primary" />
+            Achievements
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-0 space-y-3">
+          <div className="flex justify-between text-center gap-2">
+            {[
+              { href: "https://www.torn.com/awards.php", value: data.awards || 0, label: "Awards" },
+              { href: "https://www.torn.com/medals.php", value: medalsCount, label: "Medals" },
+              { href: "https://www.torn.com/merits.php", value: meritCount, label: "Merits" },
+              { href: "https://www.torn.com/perks.php", value: perksCount, label: "Perks" },
+            ].map(({ href, value, label }) => (
+              <a key={label} href={href} target="_blank" rel="noreferrer" className="flex-1 bg-muted/30 rounded p-1.5 border border-border/50 hover:border-primary/40 hover:bg-muted/50 transition-colors">
+                <div className="text-sm font-mono font-bold text-foreground">{value}</div>
+                <div className="text-[9px] uppercase font-bold text-muted-foreground">{label}</div>
+              </a>
+            ))}
+          </div>
+          {jobPointsList.length > 0 && <CompactList title="Job Points" items={jobPointsList} icon={Briefcase} />}
+          <MeritUpgrades merits={data.merits} />
+        </CardContent>
+      </Card>
+    );
+    if (panelId === "selected-stats") return <SelectedStats stats={data.personalstats} />;
+    return null;
+  };
+
   return (
     <div className={cn("space-y-4 pb-20 transition-opacity duration-500", isFetching ? "opacity-70" : "opacity-100")}>
       
@@ -650,134 +951,7 @@ export default function Dashboard() {
           <SortableContext items={order["left-a"]} strategy={verticalListSortingStrategy}>
               {order["left-a"].map((panelId) => (
                 <SortablePanel key={panelId} id={panelId} locked={locked}>
-
-                  {/* VITALS CARD */}
-                  {panelId === "vitals" && (
-                    <Card className="bg-card shadow-sm">
-                      <CardHeader className="p-3 pb-0">
-                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                          <Activity className="w-3.5 h-3.5 text-primary" />
-                          Vitals
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3 pt-3 space-y-3">
-                        {data.life && <ProgressBar label="Life" current={data.life.current} max={data.life.maximum} timeRemainingSeconds={data.life.fulltime} tick={tick} colorClass="bg-blue-500" />}
-                        {data.energy && (
-                          <ProgressBar
-                            label="Energy" current={data.energy.current} max={data.energy.maximum}
-                            timeRemainingSeconds={data.energy.fulltime} tick={tick} colorClass="bg-green-500"
-                            flashWhenFull actionHref="https://www.torn.com/gym.php" actionLabel="Train"
-                            actionInline
-                          />
-                        )}
-                        {data.nerve && (
-                          <ProgressBar
-                            label="Nerve" current={data.nerve.current} max={data.nerve.maximum}
-                            timeRemainingSeconds={data.nerve.fulltime} tick={tick} colorClass="bg-red-500"
-                            flashWhenFull actionHref="https://www.torn.com/crimes.php" actionLabel="Commit Crime"
-                            actionInline
-                          />
-                        )}
-                        {data.happy && <ProgressBar label="Happy" current={data.happy.current} max={data.happy.maximum} timeRemainingSeconds={data.happy.fulltime} tick={tick} colorClass="bg-yellow-500" />}
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* COOLDOWNS */}
-                  {panelId === "cooldowns" && (
-                    <Card className="bg-card shadow-sm">
-                      <CardHeader className="p-3 pb-0">
-                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                          <Clock className="w-3.5 h-3.5 text-primary" />
-                          Cooldowns
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3 pt-2 text-[11px] space-y-1">
-                        {[
-                          { label: "Drug", val: data.cooldowns?.drug, readyHref: "https://www.torn.com/item.php#drugs-items", readyLabel: "Use Drug" },
-                          { label: "Medical", val: data.cooldowns?.medical },
-                          { label: "Booster", val: data.cooldowns?.booster }
-                        ].map(cd => {
-                          const remaining = Math.max(0, (cd.val || 0) - tick);
-                          const isReady = remaining <= 0;
-                          return (
-                            <div key={cd.label} className="flex justify-between items-center">
-                              <span className="text-muted-foreground font-bold uppercase tracking-wider">{cd.label}</span>
-                              {isReady && cd.readyHref ? (
-                                <a href={cd.readyHref} target="_blank" rel="noreferrer" className="font-bold text-[9px] uppercase tracking-widest px-2 py-0.5 rounded border border-yellow-500/40 bg-yellow-500/10 text-yellow-400 animate-pulse hover:opacity-80 transition-opacity">
-                                  {cd.readyLabel}
-                                </a>
-                              ) : (
-                                <span className={cn("font-mono font-bold", isReady ? "text-muted-foreground opacity-50" : "text-yellow-500")}>
-                                  {isReady ? "RDY" : formatTimeRemaining(remaining)}
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* FINANCIALS & NETWORTH */}
-                  {panelId === "assets" && (
-                    <Card className="bg-card shadow-sm">
-                      <CardHeader className="p-3 pb-0">
-                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                          <Banknote className="w-3.5 h-3.5 text-green-500" />
-                          Assets
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3 pt-2">
-                        <div className="grid grid-cols-2 gap-2 mb-3">
-                          <div>
-                            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Cash</div>
-                            <div className="font-mono text-sm font-bold text-green-400">{formatNumber(data.money_onhand || 0, true)}</div>
-                          </div>
-                          <div>
-                            <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Points</div>
-                            <div className="font-mono text-sm font-bold text-primary">{formatNumber(data.points || 0)}</div>
-                          </div>
-                        </div>
-                        <div className="bg-card border border-border/40 rounded-md overflow-hidden mb-3">
-                          <div className="flex justify-between items-center p-2 border-b border-border/50 bg-muted/20">
-                            <span className="text-[11px] text-muted-foreground font-bold uppercase">Networth</span>
-                            <span className="font-mono text-sm font-bold">{formatLargeNumber(data.networth?.total || 0, true)}</span>
-                          </div>
-                          <div className="flex h-1.5 w-full bg-secondary">
-                            <div style={{ width: `${((data.networth?.wallet || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-green-500" title="Wallet" />
-                            <div style={{ width: `${((data.networth?.bank || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-blue-500" title="Bank" />
-                            <div style={{ width: `${((data.networth?.items || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-purple-500" title="Items" />
-                            <div style={{ width: `${((data.networth?.properties || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-orange-500" title="Properties" />
-                            <div style={{ width: `${((data.networth?.stockmarket || 0) / (data.networth?.total || 1)) * 100}%` }} className="bg-yellow-500" title="Stocks" />
-                          </div>
-                        </div>
-                        {(() => {
-                          const entries = [
-                            { label: "Property Vault", value: data.vault_amount || 0, sub: null },
-                            { label: "City Bank", value: data.city_bank?.amount || 0, sub: data.city_bank?.time_left > 0 ? `in ${formatTimeRemaining(Math.max(0, data.city_bank.time_left - tick))}` : null },
-                            ...(data.networth?.items > 0 ? [{ label: "Items", value: data.networth.items, sub: null }] : []),
-                            ...(data.networth?.stockmarket > 0 ? [{ label: "Stocks", value: data.networth.stockmarket, sub: null }] : []),
-                            ...((data.networth as any)?.displaycase > 0 ? [{ label: "Display Case", value: (data.networth as any).displaycase, sub: null }] : []),
-                          ].sort((a, b) => b.value - a.value);
-                          return (
-                            <div className="space-y-1.5 text-[11px]">
-                              {entries.map((entry, i) => (
-                                <div key={entry.label} className={cn("flex justify-between items-center py-1", i > 0 && "border-t border-border/30")}>
-                                  <span className="text-muted-foreground uppercase font-bold tracking-wider">{entry.label}</span>
-                                  <div className="text-right">
-                                    <div className="font-mono">{formatLargeNumber(entry.value, true)}</div>
-                                    {entry.sub && <div className="text-[9px] text-muted-foreground">{entry.sub}</div>}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })()}
-                      </CardContent>
-                    </Card>
-                  )}
-
+                  {renderPanel(panelId)}
                 </SortablePanel>
               ))}
             </SortableContext>
@@ -788,187 +962,7 @@ export default function Dashboard() {
           <SortableContext items={order["left-b"]} strategy={verticalListSortingStrategy}>
               {order["left-b"].map((panelId) => (
                 <SortablePanel key={panelId} id={panelId} locked={locked}>
-
-                  {/* FACTION */}
-                  {panelId === "vitals-side" && (() => {
-                    const faction = data.faction;
-                    const rankedWars = factionData?.ranked_wars ? Object.values(factionData.ranked_wars) : [];
-                    const activeWar = rankedWars.find(w => w.war.end === 0);
-                    const myFactionId = faction?.faction_id ? String(faction.faction_id) : null;
-                    const myScore = activeWar && myFactionId ? activeWar.factions[myFactionId]?.score : null;
-                    const opponentEntry = activeWar && myFactionId
-                      ? Object.entries(activeWar.factions).find(([id]) => id !== myFactionId)
-                      : null;
-                    const opponentScore = opponentEntry?.[1]?.score;
-                    const opponentName = opponentEntry?.[1]?.name;
-                    const memberCount = factionData?.members ? Object.keys(factionData.members).length : null;
-
-                    return (
-                      <Card className="bg-card shadow-sm">
-                        <CardHeader className="p-3 pb-0">
-                          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                            <Shield className="w-3.5 h-3.5 text-primary" />
-                            Faction
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-3 pt-2 space-y-3">
-                          {faction?.faction_name ? (
-                            <>
-                              <div>
-                                <a
-                                  href="https://www.torn.com/factions.php?step=your&type=1#/"
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="group flex items-center gap-1.5 w-fit"
-                                >
-                                  <span className="text-base font-black text-foreground group-hover:text-primary transition-colors leading-tight">
-                                    {faction.faction_name}
-                                  </span>
-                                  <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
-                                </a>
-                                {faction.faction_tag && (
-                                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">[{faction.faction_tag}]</span>
-                                )}
-                              </div>
-
-                              <div className="grid grid-cols-2 gap-2 text-[11px]">
-                                <div className="bg-muted/30 rounded-md p-2 border border-border/40">
-                                  <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Position</div>
-                                  <div className="font-bold text-foreground truncate">{faction.position}</div>
-                                </div>
-                                <div className="bg-muted/30 rounded-md p-2 border border-border/40">
-                                  <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Days In</div>
-                                  <div className="font-mono font-bold text-foreground">{faction.days_in_faction.toLocaleString()}</div>
-                                </div>
-                                {memberCount !== null && (
-                                  <div className="bg-muted/30 rounded-md p-2 border border-border/40">
-                                    <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Members</div>
-                                    <div className="font-mono font-bold text-foreground">{memberCount}</div>
-                                  </div>
-                                )}
-                                {factionData?.respect !== undefined && (
-                                  <div className="bg-muted/30 rounded-md p-2 border border-border/40">
-                                    <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Respect</div>
-                                    <div className="font-mono font-bold text-foreground">{formatLargeNumber(factionData.respect)}</div>
-                                  </div>
-                                )}
-                              </div>
-
-                              {activeWar && (
-                                <div className="rounded-md border border-red-500/30 bg-red-500/5 p-2.5 space-y-1.5">
-                                  <div className="flex items-center gap-1.5 mb-1">
-                                    <Swords className="w-3 h-3 text-red-400" />
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-red-400">Ranked War</span>
-                                  </div>
-                                  <div className="flex justify-between items-center text-[11px]">
-                                    <span className="font-bold text-foreground truncate max-w-[55%]">{faction.faction_name}</span>
-                                    <span className="font-mono font-bold text-green-400">{myScore ?? "—"}</span>
-                                  </div>
-                                  <div className="flex justify-between items-center text-[11px]">
-                                    <span className="text-muted-foreground truncate max-w-[55%]">{opponentName ?? "Opponent"}</span>
-                                    <span className="font-mono font-bold text-red-400">{opponentScore ?? "—"}</span>
-                                  </div>
-                                </div>
-                              )}
-
-                              {data.chain && data.chain.current > 0 && (
-                                <div className="rounded-md border border-purple-500/20 bg-purple-500/5 p-2">
-                                  <ProgressBar label={`Chain (x${data.chain.modifier})`} current={data.chain.current} max={data.chain.maximum} timeRemainingSeconds={data.chain.timeout} tick={tick} colorClass="bg-purple-500" />
-                                </div>
-                              )}
-
-                              {data.travel && data.travel.time_left > 0 && (
-                                <div className="flex justify-between items-center rounded-md border border-blue-500/20 bg-blue-500/5 p-2">
-                                  <div className="flex items-center gap-2">
-                                    <Plane className="w-3.5 h-3.5 text-blue-400" />
-                                    <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400">To {data.travel.destination}</span>
-                                  </div>
-                                  <span className="font-mono text-sm font-bold text-blue-400">
-                                    {formatTimeRemaining(Math.max(0, data.travel.time_left - tick))}
-                                  </span>
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                            <div className="text-[11px] text-muted-foreground">No faction</div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })()}
-
-                  {/* BATTLE STATS & WORK STATS */}
-                  {panelId === "stats" && (
-                    <Card className="bg-card shadow-sm">
-                      <CardHeader className="p-3 pb-0">
-                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                          <Swords className="w-3.5 h-3.5 text-primary" />
-                          Stats
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3 pt-2">
-                        <div className="grid grid-cols-1 gap-2 mb-3">
-                          <EffectiveStatBox label="Strength" base={data.strength || 0} modifierPct={data.strength_modifier || 0} activeBonusPct={activeEnhancerBonus.strength} />
-                          <EffectiveStatBox label="Defense" base={data.defense || 0} modifierPct={data.defense_modifier || 0} activeBonusPct={activeEnhancerBonus.defense} />
-                          <EffectiveStatBox label="Speed" base={data.speed || 0} modifierPct={data.speed_modifier || 0} activeBonusPct={activeEnhancerBonus.speed} />
-                          <EffectiveStatBox label="Dexterity" base={data.dexterity || 0} modifierPct={data.dexterity_modifier || 0} activeBonusPct={activeEnhancerBonus.dexterity} />
-                        </div>
-                        {(() => {
-                          const baseTotal = data.total || 0;
-                          const effTotal =
-                            Math.round((data.strength || 0) * (1 + ((data.strength_modifier || 0) + activeEnhancerBonus.strength) / 100)) +
-                            Math.round((data.defense || 0) * (1 + ((data.defense_modifier || 0) + activeEnhancerBonus.defense) / 100)) +
-                            Math.round((data.speed || 0) * (1 + ((data.speed_modifier || 0) + activeEnhancerBonus.speed) / 100)) +
-                            Math.round((data.dexterity || 0) * (1 + ((data.dexterity_modifier || 0) + activeEnhancerBonus.dexterity) / 100));
-                          const totalAffected = effTotal !== baseTotal;
-                          return (
-                            <div className="bg-primary/5 rounded-md p-2 border border-primary/10 flex justify-between items-center mb-3">
-                              <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Total</span>
-                              <div className="flex items-baseline gap-2">
-                                <span className="font-mono font-bold text-sm text-primary">{formatLargeNumber(baseTotal)}</span>
-                                {totalAffected && (
-                                  <>
-                                    <span className="text-muted-foreground text-[10px]">/</span>
-                                    <span className="font-mono font-bold text-sm text-emerald-400">{formatLargeNumber(effTotal)}</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })()}
-                        <div className="space-y-1.5 pt-2 border-t border-border/50">
-                          <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">MANUAL</span><span className="font-mono">{formatNumber(data.manual_labor || 0)}</span></div>
-                          <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">INTEL</span><span className="font-mono">{formatNumber(data.intelligence || 0)}</span></div>
-                          <div className="flex justify-between text-[11px]"><span className="text-muted-foreground font-bold uppercase tracking-wider">ENDUR</span><span className="font-mono">{formatNumber(data.endurance || 0)}</span></div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* EDUCATION */}
-                  {panelId === "education" && (
-                    <Card className="bg-card shadow-sm">
-                      <CardHeader className="p-3 pb-0">
-                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                          <GraduationCap className="w-3.5 h-3.5 text-primary" />
-                          Education
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3 pt-2 text-[11px]">
-                        {data.education_current !== 0 ? (
-                          <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground truncate">In Progress</span>
-                            <span className="font-mono font-bold text-primary">
-                              {formatTimeRemaining(Math.max(0, (data.education_timeleft || 0) - tick))}
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="text-muted-foreground">No active course</div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  )}
-
+                  {renderPanel(panelId)}
                 </SortablePanel>
               ))}
             </SortableContext>
@@ -979,95 +973,7 @@ export default function Dashboard() {
           <SortableContext items={order.right} strategy={verticalListSortingStrategy}>
               {order.right.map((panelId) => (
                 <SortablePanel key={panelId} id={panelId} locked={locked}>
-
-                  {/* REFILLS & USAGE */}
-                  {panelId === "refills" && <Card className="bg-card shadow-sm">
-            <CardHeader className="p-3 pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <BatteryCharging className="w-3.5 h-3.5 text-primary" />
-                Refills Available Today
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 pt-0">
-              <div className="flex gap-2">
-                {/* Energy — green + flashing when available (not yet used) */}
-                <a
-                  href="https://www.torn.com/points.php"
-                  target="_blank"
-                  rel="noreferrer"
-                  className={cn(
-                    "flex-1 text-center py-2 rounded text-[10px] font-bold uppercase border cursor-pointer transition-colors",
-                    !data.refills?.energy_refill_used
-                      ? "bg-green-500/20 text-green-400 border-green-500/40 shadow-[0_0_10px_rgba(34,197,94,0.25)] animate-pulse"
-                      : "bg-muted/20 text-muted-foreground/40 border-border/30 line-through"
-                  )}
-                >
-                  Energy
-                </a>
-                {/* Nerve — red + flashing when available */}
-                <a
-                  href="https://www.torn.com/points.php"
-                  target="_blank"
-                  rel="noreferrer"
-                  className={cn(
-                    "flex-1 text-center py-2 rounded text-[10px] font-bold uppercase border cursor-pointer transition-colors",
-                    !data.refills?.nerve_refill_used
-                      ? "bg-red-500/20 text-red-400 border-red-500/40 shadow-[0_0_10px_rgba(239,68,68,0.25)] animate-pulse"
-                      : "bg-muted/20 text-muted-foreground/40 border-border/30 line-through"
-                  )}
-                >
-                  Nerve
-                </a>
-                {/* Casino token — gray, no flash */}
-                <a
-                  href="https://www.torn.com/points.php"
-                  target="_blank"
-                  rel="noreferrer"
-                  className={cn(
-                    "flex-1 text-center py-2 rounded text-[10px] font-bold uppercase border cursor-pointer transition-colors",
-                    !data.refills?.token_refill_used
-                      ? "bg-zinc-500/20 text-zinc-300 border-zinc-500/40"
-                      : "bg-muted/20 text-muted-foreground/40 border-border/30 line-through"
-                  )}
-                >
-                  Casino
-                </a>
-              </div>
-            </CardContent>
-          </Card>}
-
-                  {/* PERKS, MERITS, MEDALS SUMMARY */}
-                  {panelId === "achievements" && <Card className="bg-card shadow-sm">
-            <CardHeader className="p-3 pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Award className="w-3.5 h-3.5 text-primary" />
-                Achievements
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 pt-0 space-y-3">
-              <div className="flex justify-between text-center gap-2">
-                {[
-                  { href: "https://www.torn.com/awards.php", value: data.awards || 0, label: "Awards" },
-                  { href: "https://www.torn.com/medals.php", value: medalsCount, label: "Medals" },
-                  { href: "https://www.torn.com/merits.php", value: meritCount, label: "Merits" },
-                  { href: "https://www.torn.com/perks.php", value: perksCount, label: "Perks" },
-                ].map(({ href, value, label }) => (
-                  <a key={label} href={href} target="_blank" rel="noreferrer" className="flex-1 bg-muted/30 rounded p-1.5 border border-border/50 hover:border-primary/40 hover:bg-muted/50 transition-colors">
-                    <div className="text-sm font-mono font-bold text-foreground">{value}</div>
-                    <div className="text-[9px] uppercase font-bold text-muted-foreground">{label}</div>
-                  </a>
-                ))}
-              </div>
-
-              {jobPointsList.length > 0 && <CompactList title="Job Points" items={jobPointsList} icon={Briefcase} />}
-              <MeritUpgrades merits={data.merits} />
-
-            </CardContent>
-          </Card>}
-
-                  {/* PERSONAL STATS */}
-                  {panelId === "selected-stats" && <SelectedStats stats={data.personalstats} />}
-
+                  {renderPanel(panelId)}
                 </SortablePanel>
               ))}
             </SortableContext>
