@@ -1,8 +1,20 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ENHANCERS, ENHANCER_DURATION_SECONDS } from "@/lib/enhancers";
 import type { StatKey } from "@/lib/enhancers";
 
 const ACTIVATIONS_KEY = "torn_enhancer_activations_v1";
+
+/**
+ * Custom event the Torn browser extension dispatches when a battle enhancer
+ * is used on torn.com. The dashboard listens for this and starts the countdown
+ * automatically — no manual "Used" click required when the extension is active.
+ *
+ * Extension usage (content script injected into the dashboard page):
+ *   window.dispatchEvent(
+ *     new CustomEvent("torn:enhancer:used", { detail: { enhancerId: 463 } })
+ *   );
+ */
+export const ENHANCER_EVENT = "torn:enhancer:used";
 
 type Activations = Record<number, number>; // enhancerId -> unix timestamp of last use
 
@@ -25,6 +37,18 @@ export function useEnhancerActivations() {
       return next;
     });
   }, []);
+
+  // Listen for activations dispatched by the browser extension content script.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ enhancerId: number }>).detail;
+      if (typeof detail?.enhancerId === "number") {
+        activate(detail.enhancerId);
+      }
+    };
+    window.addEventListener(ENHANCER_EVENT, handler);
+    return () => window.removeEventListener(ENHANCER_EVENT, handler);
+  }, [activate]);
 
   const computeBonus = (nowUnix: number): Record<StatKey, number> => {
     const bonus: Record<StatKey, number> = { strength: 0, defense: 0, speed: 0, dexterity: 0 };
