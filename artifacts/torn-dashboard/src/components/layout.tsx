@@ -97,7 +97,7 @@ export function Layout({ children }: LayoutProps) {
               <div className="hidden md:flex items-center gap-3 text-sm text-muted-foreground">
                 <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{maskedKey}</span>
                 <div className="flex items-center gap-2">
-                  <span>Auto-refresh in {nextRefresh}s</span>
+                  <span>Auto-refresh in <span className="inline-block w-5 text-right tabular-nums">{nextRefresh}</span>s</span>
                   <Button
                     variant="ghost"
                     size="icon"
