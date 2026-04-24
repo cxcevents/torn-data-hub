@@ -348,6 +348,7 @@ export default function Dashboard() {
                     label="Energy" current={data.energy.current} max={data.energy.maximum}
                     timeRemainingSeconds={data.energy.fulltime} tick={tick} colorClass="bg-green-500"
                     flashWhenFull actionHref="https://www.torn.com/gym.php" actionLabel="Train"
+                    actionInline
                   />
                 )}
                 {data.nerve && (
