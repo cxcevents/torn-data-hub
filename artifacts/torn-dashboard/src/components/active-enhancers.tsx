@@ -1,15 +1,17 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ENHANCERS, ENHANCER_DURATION_SECONDS, ENHANCER_FLASH_THRESHOLD_SECONDS } from "@/lib/enhancers";
 import { useEnhancerLog } from "@/hooks/use-enhancer-log";
 import { useApiKey } from "@/hooks/use-api-key";
 import { useTick, formatTimeRemaining } from "@/hooks/use-tick";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, RotateCw } from "lucide-react";
+import { AlertCircle, ChevronDown, RotateCw, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { motion, useAnimationControls } from "framer-motion";
+import { motion, useAnimationControls, AnimatePresence } from "framer-motion";
 import { useEffect } from "react";
+
+const COLLAPSE_KEY = "torn_enhancers_collapsed";
 
 function formatRelativeTime(secondsAgo: number) {
   if (secondsAgo < 60) return `${secondsAgo}s ago`;
@@ -39,22 +41,12 @@ function EnhancerCard({
     if (isFlashing) {
       controls.start({
         backgroundColor: [enhancer.activeBg, enhancer.flashBg, enhancer.activeBg],
-        transition: {
-          duration: 0.8,
-          repeat: Infinity,
-          ease: "easeInOut",
-        },
+        transition: { duration: 0.8, repeat: Infinity, ease: "easeInOut" },
       });
     } else if (enhancer.active) {
-      controls.start({
-        backgroundColor: enhancer.activeBg,
-        transition: { duration: 0.4 },
-      });
+      controls.start({ backgroundColor: enhancer.activeBg, transition: { duration: 0.4 } });
     } else {
-      controls.start({
-        backgroundColor: "transparent",
-        transition: { duration: 0.4 },
-      });
+      controls.start({ backgroundColor: "transparent", transition: { duration: 0.4 } });
     }
   }, [isFlashing, enhancer.active, enhancer.activeBg, enhancer.flashBg, controls]);
 
@@ -64,17 +56,9 @@ function EnhancerCard({
       initial={{ backgroundColor: "transparent" }}
       className={cn(
         "rounded-xl border overflow-hidden relative transition-[border-color,box-shadow] duration-300",
-        enhancer.active
-          ? "border-border/50 shadow-md"
-          : "border-border/20 opacity-70"
+        enhancer.active ? "border-border/50 shadow-md" : "border-border/20 opacity-70"
       )}
-      style={
-        enhancer.active
-          ? {
-              boxShadow: `0 0 14px ${enhancer.activeBg.replace(/[\d.]+\)$/, "0.25)")}`,
-            }
-          : undefined
-      }
+      style={enhancer.active ? { boxShadow: `0 0 14px ${enhancer.activeBg.replace(/[\d.]+\)$/, "0.25)")}` } : undefined}
     >
       {enhancer.active && (
         <motion.div
@@ -115,9 +99,7 @@ function EnhancerCard({
                 {formatTimeRemaining(timeRemaining)}
               </motion.div>
             ) : (
-              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide">
-                Inactive
-              </div>
+              <div className="text-xs font-bold text-muted-foreground uppercase tracking-wide">Inactive</div>
             )}
           </div>
         </div>
@@ -146,80 +128,117 @@ export function ActiveEnhancers() {
   const { data: logs, isLoading, error, refetch } = useEnhancerLog(apiKey);
   const tick = useTick();
 
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem(COLLAPSE_KEY) === "1"; } catch { return false; }
+  });
+
+  const toggle = () => {
+    setCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0"); } catch {}
+      return next;
+    });
+  };
+
   const nowUnix = Math.floor(Date.now() / 1000);
 
   const enhancerStatus = useMemo(() => {
     if (!logs) return ENHANCERS.map(e => ({ ...e, active: false, lastUsed: 0, expiresAt: 0 }));
-
     const logArray = Object.values(logs);
-
     return ENHANCERS.map(enhancer => {
       const itemLogs = logArray.filter(l => l.data?.item === enhancer.id);
-
       let lastUsed = 0;
-      if (itemLogs.length > 0) {
-        lastUsed = Math.max(...itemLogs.map(l => l.timestamp));
-      }
-
+      if (itemLogs.length > 0) lastUsed = Math.max(...itemLogs.map(l => l.timestamp));
       const expiresAt = lastUsed + ENHANCER_DURATION_SECONDS;
       const active = expiresAt > nowUnix;
-
       return { ...enhancer, lastUsed, expiresAt, active };
     });
   }, [logs, nowUnix]);
 
+  const activeCount = enhancerStatus.filter(e => e.active).length;
+
   if (error) {
     return (
-      <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-3 text-destructive">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          <div className="text-sm">
-            <span className="font-bold">Active Enhancer detection requires log access.</span>{" "}
-            Generate a Limited or Full key at torn.com → Preferences → API Key.
+      <Card className="border-destructive/30 bg-destructive/5">
+        <CardContent className="p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3 text-destructive">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <div className="text-sm">
+              <span className="font-bold">Active Enhancer detection requires log access.</span>{" "}
+              Generate a Limited or Full key at torn.com → Preferences → API Key.
+            </div>
           </div>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} className="flex-shrink-0 border-destructive/30 hover:bg-destructive/10 text-destructive">
-          <RotateCw className="w-4 h-4 mr-2" />
-          Retry
-        </Button>
-      </div>
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="flex-shrink-0 border-destructive/30 hover:bg-destructive/10 text-destructive">
+            <RotateCw className="w-4 h-4 mr-2" />
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <div>
-        <h3 className="text-lg font-black tracking-tight text-foreground flex items-center gap-2">
-          Active Enhancers
-        </h3>
-        <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-bold">
-          Detected from your item-use log · effects last 120s
-        </p>
-      </div>
+    <Card className="border-primary/30 bg-primary/[0.03]">
+      <button
+        onClick={toggle}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-primary/5 transition-colors rounded-t-xl group"
+      >
+        <div className="flex items-center gap-2.5">
+          <Zap className="w-3.5 h-3.5 text-primary" />
+          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Active Enhancers
+          </span>
+          {activeCount > 0 && (
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
+              {activeCount} active
+            </span>
+          )}
+        </div>
+        <motion.div
+          animate={{ rotate: collapsed ? -90 : 0 }}
+          transition={{ duration: 0.2, ease: "easeInOut" }}
+        >
+          <ChevronDown className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+        </motion.div>
+      </button>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {isLoading ? (
-          Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 w-full bg-card" />
-          ))
-        ) : (
-          enhancerStatus.map((enhancer) => {
-            const timeRemaining = Math.max(0, enhancer.expiresAt - nowUnix);
-            const percentage = enhancer.active ? (timeRemaining / ENHANCER_DURATION_SECONDS) * 100 : 0;
-            const secondsAgo = nowUnix - enhancer.lastUsed;
-
-            return (
-              <EnhancerCard
-                key={enhancer.id}
-                enhancer={enhancer}
-                timeRemaining={timeRemaining}
-                percentage={percentage}
-                secondsAgo={secondsAgo}
-              />
-            );
-          })
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            key="enhancer-body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: "easeInOut" }}
+            style={{ overflow: "hidden" }}
+          >
+            <CardContent className="px-4 pb-4 pt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {isLoading ? (
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <Skeleton key={i} className="h-24 w-full bg-card" />
+                  ))
+                ) : (
+                  enhancerStatus.map((enhancer) => {
+                    const timeRemaining = Math.max(0, enhancer.expiresAt - nowUnix);
+                    const percentage = enhancer.active ? (timeRemaining / ENHANCER_DURATION_SECONDS) * 100 : 0;
+                    const secondsAgo = nowUnix - enhancer.lastUsed;
+                    return (
+                      <EnhancerCard
+                        key={enhancer.id}
+                        enhancer={enhancer}
+                        timeRemaining={timeRemaining}
+                        percentage={percentage}
+                        secondsAgo={secondsAgo}
+                      />
+                    );
+                  })
+                )}
+              </div>
+            </CardContent>
+          </motion.div>
         )}
-      </div>
-    </div>
+      </AnimatePresence>
+    </Card>
   );
 }
