@@ -399,7 +399,7 @@ export default function Dashboard() {
 
                 <div className="space-y-1.5 text-[11px]">
                   <div className="flex justify-between items-center py-1">
-                    <span className="text-muted-foreground uppercase font-bold tracking-wider">Faction Vault</span>
+                    <span className="text-muted-foreground uppercase font-bold tracking-wider">Property Vault</span>
                     <span className="font-mono">{formatNumber(data.vault_amount || 0, true)}</span>
                   </div>
                   <div className="flex justify-between items-center py-1 border-t border-border/30">
