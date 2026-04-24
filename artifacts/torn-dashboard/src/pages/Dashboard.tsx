@@ -134,10 +134,8 @@ function ProgressBar({
       rel="noreferrer"
       className={cn(
         "px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest",
-        "border animate-pulse cursor-pointer transition-opacity hover:opacity-80",
-        textColorClass,
-        colorClass.replace("bg-", "border-") + "/40",
-        colorClass.replace("bg-", "bg-") + "/10"
+        "animate-pulse cursor-pointer transition-opacity hover:opacity-80 text-black",
+        colorClass
       )}
     >
       {actionLabel ?? "Go"}
