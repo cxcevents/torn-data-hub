@@ -107,11 +107,12 @@ function StatBox({ label, value, icon: Icon, subValue }: { label: string, value:
 
 function ProgressBar({
   label, current, max, colorClass, timeRemainingSeconds, tick,
-  flashWhenFull, actionHref, actionLabel,
+  flashWhenFull, actionHref, actionLabel, actionInline,
 }: {
   label: string; current: number; max: number; colorClass: string;
   timeRemainingSeconds?: number; tick: number;
   flashWhenFull?: boolean; actionHref?: string; actionLabel?: string;
+  actionInline?: boolean;
 }) {
   const percentage = Math.min(100, Math.max(0, (current / max) * 100));
   let displayTime = "";
@@ -126,10 +127,30 @@ function ProgressBar({
   const textColorClass = colorClass.replace("bg-", "text-");
   const showAction = isFull && actionHref;
 
+  const actionBtn = showAction ? (
+    <a
+      href={actionHref}
+      target="_blank"
+      rel="noreferrer"
+      className={cn(
+        "px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest",
+        "border animate-pulse cursor-pointer transition-opacity hover:opacity-80",
+        textColorClass,
+        colorClass.replace("bg-", "border-") + "/40",
+        colorClass.replace("bg-", "bg-") + "/10"
+      )}
+    >
+      {actionLabel ?? "Go"}
+    </a>
+  ) : null;
+
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between text-[11px] font-medium">
-        <span className="uppercase tracking-wider text-muted-foreground">{label}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="uppercase tracking-wider text-muted-foreground">{label}</span>
+          {actionInline && actionBtn}
+        </div>
         <div className="flex gap-2 items-center">
           <span className="font-mono text-foreground">{current} / {max}</span>
           {!isFull && displayTime && <span className="text-muted-foreground font-mono">{displayTime}</span>}
@@ -149,23 +170,11 @@ function ProgressBar({
           />
         </div>
 
-        {showAction && (
+        {!actionInline && showAction && (
           <div className="absolute inset-x-0 -top-0.5 flex justify-center pointer-events-none">
-            <a
-              href={actionHref}
-              target="_blank"
-              rel="noreferrer"
-              className={cn(
-                "pointer-events-auto -translate-y-1/2 px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest",
-                "border animate-pulse cursor-pointer transition-opacity hover:opacity-80",
-                textColorClass,
-                colorClass.replace("bg-", "border-") + "/40",
-                colorClass.replace("bg-", "bg-") + "/10"
-              )}
-              style={{ marginTop: "0.75rem" }}
-            >
-              {actionLabel ?? "Go"}
-            </a>
+            <div className="pointer-events-auto" style={{ marginTop: "0.75rem" }}>
+              {actionBtn}
+            </div>
           </div>
         )}
       </div>
@@ -348,6 +357,7 @@ export default function Dashboard() {
                     label="Nerve" current={data.nerve.current} max={data.nerve.maximum}
                     timeRemainingSeconds={data.nerve.fulltime} tick={tick} colorClass="bg-red-500"
                     flashWhenFull actionHref="https://www.torn.com/crimes.php" actionLabel="Commit Crime"
+                    actionInline
                   />
                 )}
                 {data.happy && <ProgressBar label="Happy" current={data.happy.current} max={data.happy.maximum} timeRemainingSeconds={data.happy.fulltime} tick={tick} colorClass="bg-yellow-500" />}
