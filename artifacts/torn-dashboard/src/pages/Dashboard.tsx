@@ -580,20 +580,53 @@ export default function Dashboard() {
             <CardHeader className="p-3 pb-2">
               <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                 <BatteryCharging className="w-3.5 h-3.5 text-primary" />
-                Refills Used Today
+                Refills Available Today
               </CardTitle>
             </CardHeader>
             <CardContent className="p-3 pt-0">
               <div className="flex gap-2">
-                <div className={cn("flex-1 text-center py-1 rounded text-[10px] font-bold uppercase border", data.refills?.energy_refill_used ? "bg-green-500/10 text-green-500 border-green-500/20" : "bg-muted/30 text-muted-foreground border-border/50")}>
+                {/* Energy — green + flashing when available (not yet used) */}
+                <a
+                  href="https://www.torn.com/points.php"
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cn(
+                    "flex-1 text-center py-2 rounded text-[10px] font-bold uppercase border cursor-pointer transition-colors",
+                    !data.refills?.energy_refill_used
+                      ? "bg-green-500/20 text-green-400 border-green-500/40 shadow-[0_0_10px_rgba(34,197,94,0.25)] animate-pulse"
+                      : "bg-muted/20 text-muted-foreground/40 border-border/30 line-through"
+                  )}
+                >
                   Energy
-                </div>
-                <div className={cn("flex-1 text-center py-1 rounded text-[10px] font-bold uppercase border", data.refills?.nerve_refill_used ? "bg-red-500/10 text-red-500 border-red-500/20" : "bg-muted/30 text-muted-foreground border-border/50")}>
+                </a>
+                {/* Nerve — red + flashing when available */}
+                <a
+                  href="https://www.torn.com/points.php"
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cn(
+                    "flex-1 text-center py-2 rounded text-[10px] font-bold uppercase border cursor-pointer transition-colors",
+                    !data.refills?.nerve_refill_used
+                      ? "bg-red-500/20 text-red-400 border-red-500/40 shadow-[0_0_10px_rgba(239,68,68,0.25)] animate-pulse"
+                      : "bg-muted/20 text-muted-foreground/40 border-border/30 line-through"
+                  )}
+                >
                   Nerve
-                </div>
-                <div className={cn("flex-1 text-center py-1 rounded text-[10px] font-bold uppercase border", data.refills?.token_refill_used ? "bg-primary/10 text-primary border-primary/20" : "bg-muted/30 text-muted-foreground border-border/50")}>
-                  Token
-                </div>
+                </a>
+                {/* Casino token — gray, no flash */}
+                <a
+                  href="https://www.torn.com/points.php"
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cn(
+                    "flex-1 text-center py-2 rounded text-[10px] font-bold uppercase border cursor-pointer transition-colors",
+                    !data.refills?.token_refill_used
+                      ? "bg-zinc-500/20 text-zinc-300 border-zinc-500/40"
+                      : "bg-muted/20 text-muted-foreground/40 border-border/30 line-through"
+                  )}
+                >
+                  Casino
+                </a>
               </div>
             </CardContent>
           </Card>
