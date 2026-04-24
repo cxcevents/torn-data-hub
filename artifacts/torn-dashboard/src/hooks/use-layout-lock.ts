@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 
 const LOCK_EVENT = "torn_layout_lock_changed";
-const ORDER_KEY = "torn_layout_order_v7";
+const ORDER_KEY = "torn_layout_order_v8";
 
 const DEFAULT_ORDER: string[] = [
   "vitals", "cooldowns", "assets",
   "vitals-side", "stats", "education",
-  "refills", "achievements", "selected-stats",
+  "refills", "xanax-tracker", "achievements", "selected-stats",
 ];
 
 function loadOrder(): string[] {

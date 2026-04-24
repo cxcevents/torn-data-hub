@@ -3,6 +3,7 @@ import { useApiKey } from "@/hooks/use-api-key";
 import { useTornUser } from "@/hooks/use-torn-user";
 import { useFaction } from "@/hooks/use-faction";
 import { ActiveEnhancers } from "@/components/active-enhancers";
+import { XanaxTracker } from "@/components/xanax-tracker";
 import { useEnhancerActivations } from "@/hooks/use-enhancer-activations";
 import { type StatKey } from "@/lib/enhancers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -424,6 +425,7 @@ export default function Dashboard() {
     "refills": "Refills",
     "achievements": "Achievements",
     "selected-stats": "Selected Stats",
+    "xanax-tracker": "Xanax",
   };
 
   const handleDragStart = ({ active }: DragStartEvent) => setActiveId(active.id);
@@ -799,6 +801,7 @@ export default function Dashboard() {
         </CardContent>
       </Card>
     );
+    if (panelId === "xanax-tracker") return <XanaxTracker xantakenTotal={data.personalstats?.xantaken} />;
     if (panelId === "selected-stats") return <SelectedStats stats={data.personalstats} />;
     return null;
   };
