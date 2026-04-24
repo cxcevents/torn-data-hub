@@ -575,7 +575,7 @@ export default function Dashboard() {
                           </div>
                           {data.networth?.items > 0 && (
                             <div className="flex justify-between items-center py-1 border-t border-border/30">
-                              <span className="text-muted-foreground uppercase font-bold tracking-wider">Items NW</span>
+                              <span className="text-muted-foreground uppercase font-bold tracking-wider">Items</span>
                               <span className="font-mono">{formatLargeNumber(data.networth.items, true)}</span>
                             </div>
                           )}
