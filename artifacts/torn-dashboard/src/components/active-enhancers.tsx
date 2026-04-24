@@ -192,7 +192,7 @@ export function ActiveEnhancers() {
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-primary/5 transition-colors rounded-t-xl group"
       >
         <div className="flex items-center gap-2.5">
-          <Syringe className="w-3.5 h-3.5 text-primary" />
+          <Syringe className="w-3.5 h-3.5 text-primary scale-150" />
           <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Active Enhancers <span className="text-muted-foreground/50">(WIP)</span>
           </span>
