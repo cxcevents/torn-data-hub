@@ -36,7 +36,7 @@ function NavIcon({ href, icon, currentPath, navigate }: NavIconProps) {
       className={cn(
         "h-9 w-9 flex items-center justify-center rounded-md transition-colors",
         isActive
-          ? "bg-primary/15 text-primary"
+          ? "bg-accent text-foreground"
           : "text-muted-foreground hover:text-foreground hover:bg-accent"
       )}
     >
