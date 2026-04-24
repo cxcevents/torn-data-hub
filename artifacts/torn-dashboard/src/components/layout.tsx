@@ -14,7 +14,10 @@ function formatTime(date: Date, utc: boolean): string {
   if (utc) {
     return `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`;
   }
-  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  const h24 = date.getHours();
+  const h12 = h24 % 12 || 12;
+  const ampm = h24 < 12 ? "AM" : "PM";
+  return `${h12}:${pad(date.getMinutes())}:${pad(date.getSeconds())} ${ampm}`;
 }
 
 function NavClocks() {
