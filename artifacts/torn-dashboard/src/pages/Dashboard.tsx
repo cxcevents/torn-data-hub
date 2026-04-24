@@ -188,7 +188,7 @@ function ProgressBar({
   );
 }
 
-const COMPACT_PANELS = new Set(["vitals-side", "cooldowns", "stats", "assets", "education"]);
+const COMPACT_PANELS = new Set(["vitals", "vitals-side", "cooldowns", "stats", "assets", "education"]);
 
 function SortablePanel({ id, locked, children, className }: { id: string; locked: boolean; children: React.ReactNode; className?: string }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: locked });
