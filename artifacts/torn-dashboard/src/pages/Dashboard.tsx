@@ -80,9 +80,9 @@ function MeritUpgrades({ merits }: { merits: Record<string, number> | undefined 
               ? "bg-primary/20 border-primary/40 text-primary"
               : "bg-muted/40 border-border text-muted-foreground hover-elevate"
           )}
-          title={onlySet ? "Showing only upgraded merits — click to show all" : "Showing all merits — click to show upgraded only"}
+          title={onlySet ? "Showing only merits with points spent — click to show all" : "Showing all merits — click to show spent only"}
         >
-          {onlySet ? "Upgraded" : "Showing All"}
+          {onlySet ? "Spent" : "Showing All"}
         </button>
       </div>
       <div className="space-y-1.5 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
