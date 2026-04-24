@@ -130,5 +130,7 @@ export function useXanaxTracker(apiKey: string | null, xantakenTotal: number | u
     return result;
   }, [logReady, logData, history, manual, today, todayCount, sourceIsLog, sourceIsDelta]);
 
-  return { todayCount, sourceIsLog, sourceIsDelta, sourceIsManual, adjustManual, monthData, today, goal: 3 };
+  const lastUsedTimestamp = logReady ? logData.lastUsedTimestamp : null;
+
+  return { todayCount, sourceIsLog, sourceIsDelta, sourceIsManual, adjustManual, monthData, today, goal: 3, lastUsedTimestamp };
 }

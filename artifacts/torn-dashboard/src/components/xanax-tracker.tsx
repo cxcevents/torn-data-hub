@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useXanaxTracker } from "@/hooks/use-xanax-tracker";
 import { useApiKey } from "@/hooks/use-api-key";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,10 +6,19 @@ import { Pill, ChevronDown, Plus, Minus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
+const XANAX_COOLDOWN_SECS = 6 * 3600; // 6 hours
+
 function formatDate(dateStr: string): string {
   const [year, month, day] = dateStr.split("-").map(Number);
   const d = new Date(year, month - 1, day);
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function formatCountdown(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
 function DayDots({ count, goal }: { count: number; goal: number }) {
@@ -31,10 +40,33 @@ function DayDots({ count, goal }: { count: number; goal: number }) {
   );
 }
 
+function useCooldownSecs(lastUsedTimestamp: number | null): number | null {
+  const [secs, setSecs] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (lastUsedTimestamp === null) { setSecs(null); return; }
+    const compute = () => {
+      const elapsed = Math.floor(Date.now() / 1000) - lastUsedTimestamp;
+      return Math.max(0, XANAX_COOLDOWN_SECS - elapsed);
+    };
+    setSecs(compute());
+    const id = setInterval(() => setSecs(compute()), 1000);
+    return () => clearInterval(id);
+  }, [lastUsedTimestamp]);
+
+  return secs;
+}
+
 export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefined }) {
   const { apiKey } = useApiKey();
-  const { todayCount, sourceIsLog, sourceIsManual, adjustManual, monthData, today, goal } =
+  const { todayCount, sourceIsLog, sourceIsManual, adjustManual, monthData, today, goal, lastUsedTimestamp } =
     useXanaxTracker(apiKey, xantakenTotal);
+
+  const cooldownSecs = useCooldownSecs(lastUsedTimestamp);
+  const ready = cooldownSecs === 0;
+  const cooldownPct = cooldownSecs !== null
+    ? Math.min(100, ((XANAX_COOLDOWN_SECS - cooldownSecs) / XANAX_COOLDOWN_SECS) * 100)
+    : null;
 
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -68,156 +100,200 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
   })();
 
   return (
-    <Card className="bg-card shadow-sm">
-      <CardHeader className="p-3 pb-0">
-        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Pill className="w-3.5 h-3.5 text-primary" />
-            Xanax
-          </div>
-          {sourceIsLog && (
-            <span className="text-[9px] font-bold text-primary/60 uppercase tracking-wider">Live</span>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-3 pt-2 space-y-3">
+    <motion.div
+      animate={ready ? {
+        boxShadow: [
+          "0 0 0px 0px rgba(220,38,38,0)",
+          "0 0 16px 4px rgba(220,38,38,0.55)",
+          "0 0 0px 0px rgba(220,38,38,0)",
+        ],
+      } : { boxShadow: "0 0 0px 0px rgba(220,38,38,0)" }}
+      transition={ready ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" } : { duration: 0.3 }}
+      className="rounded-lg"
+    >
+      <Card className={cn("bg-card shadow-sm transition-colors", ready && "border-primary/60")}>
+        <CardHeader className="p-3 pb-0">
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Pill className="w-3.5 h-3.5 text-primary" />
+              Xanax
+            </div>
+            {sourceIsLog && (
+              <span className="text-[9px] font-bold text-primary/60 uppercase tracking-wider">Live</span>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 pt-2 space-y-3">
 
-        {/* Today count + progress */}
-        <div className="space-y-2">
-          <div className="flex items-end justify-between">
-            <div className="flex items-baseline gap-1.5">
-              <span className={cn("text-3xl font-black font-mono leading-none", countColor)}>
-                {todayCount}
+          {/* Today count + progress */}
+          <div className="space-y-2">
+            <div className="flex items-end justify-between">
+              <div className="flex items-baseline gap-1.5">
+                <span className={cn("text-3xl font-black font-mono leading-none", countColor)}>
+                  {todayCount}
+                </span>
+                <span className="text-sm text-muted-foreground font-bold">/ {goal} today</span>
+              </div>
+              <span className={cn(
+                "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border",
+                metGoal
+                  ? "text-green-400 border-green-500/30 bg-green-500/10"
+                  : "text-muted-foreground border-border/30 bg-muted/20"
+              )}>
+                {metGoal ? "Goal Met" : `${goal - todayCount} to go`}
               </span>
-              <span className="text-sm text-muted-foreground font-bold">/ {goal} today</span>
             </div>
-            <span className={cn(
-              "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border",
-              metGoal
-                ? "text-green-400 border-green-500/30 bg-green-500/10"
-                : "text-muted-foreground border-border/30 bg-muted/20"
-            )}>
-              {metGoal ? "Goal Met" : `${goal - todayCount} to go`}
-            </span>
-          </div>
 
-          <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
-            <motion.div
-              className={cn("h-full rounded-full", barColor)}
-              initial={{ width: 0 }}
-              animate={{ width: `${pct}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-            />
-          </div>
-        </div>
-
-        {/* Manual controls — only shown when log & delta both unavailable */}
-        {sourceIsManual && (
-          <div className="flex items-center justify-between rounded-md bg-muted/30 border border-border/40 px-2 py-1.5">
-            <span className="text-[10px] text-muted-foreground leading-tight">
-              Log unavailable — enter manually.
-            </span>
-            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-              <button
-                onClick={() => adjustManual(-1)}
-                className="w-5 h-5 rounded flex items-center justify-center bg-muted/60 hover:bg-muted border border-border/50 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Minus className="w-2.5 h-2.5" />
-              </button>
-              <button
-                onClick={() => adjustManual(1)}
-                className="w-5 h-5 rounded flex items-center justify-center bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary transition-colors"
-              >
-                <Plus className="w-2.5 h-2.5" />
-              </button>
+            <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
+              <motion.div
+                className={cn("h-full rounded-full", barColor)}
+                initial={{ width: 0 }}
+                animate={{ width: `${pct}%` }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              />
             </div>
           </div>
-        )}
 
-        {/* History toggle */}
-        <button
-          onClick={() => setHistoryOpen((v) => !v)}
-          className="w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors pt-1 border-t border-border/40"
-        >
-          <span>This Month</span>
-          <motion.div animate={{ rotate: historyOpen ? 0 : -90 }} transition={{ duration: 0.18 }}>
-            <ChevronDown className="w-3.5 h-3.5" />
-          </motion.div>
-        </button>
-
-        <AnimatePresence initial={false}>
-          {historyOpen && (
-            <motion.div
-              key="history"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-              style={{ overflow: "hidden" }}
-            >
-              <div className="space-y-1 max-h-[200px] overflow-y-auto custom-scrollbar pr-1 pt-1">
-                {monthEntries.length === 0 ? (
-                  <div className="text-[11px] text-muted-foreground text-center py-2">No data yet</div>
+          {/* Cooldown bar */}
+          {cooldownPct !== null && (
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
+                  Cooldown
+                </span>
+                {ready ? (
+                  <motion.span
+                    className="text-[10px] font-black uppercase tracking-wider text-green-400"
+                    animate={{ opacity: [1, 0.4, 1] }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                  >
+                    Ready
+                  </motion.span>
                 ) : (
-                  monthEntries.map(({ dateStr, label, entry, isToday }) => (
-                    <div
-                      key={dateStr}
-                      className={cn(
-                        "flex items-center justify-between py-1 px-1.5 rounded text-[11px]",
-                        isToday && "bg-primary/5 border border-primary/10"
-                      )}
-                    >
-                      <div className="flex items-center gap-1.5 w-16 flex-shrink-0">
-                        <span className={cn("font-mono text-muted-foreground", isToday && "text-primary font-bold")}>
-                          {isToday ? "Today" : label}
-                        </span>
-                      </div>
-                      {entry !== null ? (
-                        <>
-                          <DayDots count={entry.count} goal={goal} />
-                          <div className="flex items-center gap-1.5">
-                            <span className={cn(
-                              "font-mono font-bold w-4 text-right",
-                              entry.count >= goal ? "text-green-400" : entry.count > 0 ? "text-amber-400" : "text-muted-foreground/50"
-                            )}>
-                              {entry.count}
-                            </span>
-                            {/* Source indicator dot */}
-                            <div
-                              title={entry.source === "log" ? "From API log" : entry.source === "snapshot" ? "From snapshot" : "Manual"}
-                              className={cn(
-                                "w-1 h-1 rounded-full flex-shrink-0",
-                                entry.source === "log" ? "bg-primary/60" : entry.source === "snapshot" ? "bg-muted-foreground/40" : "bg-amber-400/50"
-                              )}
-                            />
-                          </div>
-                        </>
-                      ) : (
-                        <span className="text-[10px] text-muted-foreground/40 italic">no data</span>
-                      )}
-                    </div>
-                  ))
+                  <span className="text-[11px] font-mono font-bold tabular-nums text-muted-foreground">
+                    {formatCountdown(cooldownSecs!)}
+                  </span>
                 )}
               </div>
-              {/* Legend */}
-              <div className="flex items-center gap-3 pt-2 mt-1 border-t border-border/30">
-                <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary/60" />
-                  <span className="text-[9px] text-muted-foreground/60">log</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
-                  <span className="text-[9px] text-muted-foreground/60">snapshot</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400/50" />
-                  <span className="text-[9px] text-muted-foreground/60">manual</span>
-                </div>
+              <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                <motion.div
+                  className={cn(
+                    "h-full rounded-full transition-colors",
+                    ready ? "bg-green-500" : cooldownPct > 75 ? "bg-amber-400" : "bg-primary/70"
+                  )}
+                  animate={{ width: `${cooldownPct}%` }}
+                  transition={{ duration: 0.8, ease: "linear" }}
+                />
               </div>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
-      </CardContent>
-    </Card>
+
+          {/* Manual controls */}
+          {sourceIsManual && (
+            <div className="flex items-center justify-between rounded-md bg-muted/30 border border-border/40 px-2 py-1.5">
+              <span className="text-[10px] text-muted-foreground leading-tight">
+                Log unavailable — enter manually.
+              </span>
+              <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                <button
+                  onClick={() => adjustManual(-1)}
+                  className="w-5 h-5 rounded flex items-center justify-center bg-muted/60 hover:bg-muted border border-border/50 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Minus className="w-2.5 h-2.5" />
+                </button>
+                <button
+                  onClick={() => adjustManual(1)}
+                  className="w-5 h-5 rounded flex items-center justify-center bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary transition-colors"
+                >
+                  <Plus className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* History toggle */}
+          <button
+            onClick={() => setHistoryOpen((v) => !v)}
+            className="w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors pt-1 border-t border-border/40"
+          >
+            <span>This Month</span>
+            <motion.div animate={{ rotate: historyOpen ? 0 : -90 }} transition={{ duration: 0.18 }}>
+              <ChevronDown className="w-3.5 h-3.5" />
+            </motion.div>
+          </button>
+
+          <AnimatePresence initial={false}>
+            {historyOpen && (
+              <motion.div
+                key="history"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                style={{ overflow: "hidden" }}
+              >
+                <div className="space-y-1 max-h-[200px] overflow-y-auto custom-scrollbar pr-1 pt-1">
+                  {monthEntries.length === 0 ? (
+                    <div className="text-[11px] text-muted-foreground text-center py-2">No data yet</div>
+                  ) : (
+                    monthEntries.map(({ dateStr, label, entry, isToday }) => (
+                      <div
+                        key={dateStr}
+                        className={cn(
+                          "flex items-center justify-between py-1 px-1.5 rounded text-[11px]",
+                          isToday && "bg-primary/5 border border-primary/10"
+                        )}
+                      >
+                        <div className="flex items-center gap-1.5 w-16 flex-shrink-0">
+                          <span className={cn("font-mono text-muted-foreground", isToday && "text-primary font-bold")}>
+                            {isToday ? "Today" : label}
+                          </span>
+                        </div>
+                        {entry !== null ? (
+                          <>
+                            <DayDots count={entry.count} goal={goal} />
+                            <div className="flex items-center gap-1.5">
+                              <span className={cn(
+                                "font-mono font-bold w-4 text-right",
+                                entry.count >= goal ? "text-green-400" : entry.count > 0 ? "text-amber-400" : "text-muted-foreground/50"
+                              )}>
+                                {entry.count}
+                              </span>
+                              <div
+                                title={entry.source === "log" ? "From API log" : entry.source === "snapshot" ? "From snapshot" : "Manual"}
+                                className={cn(
+                                  "w-1 h-1 rounded-full flex-shrink-0",
+                                  entry.source === "log" ? "bg-primary/60" : entry.source === "snapshot" ? "bg-muted-foreground/40" : "bg-amber-400/50"
+                                )}
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground/40 italic">no data</span>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="flex items-center gap-3 pt-2 mt-1 border-t border-border/30">
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary/60" />
+                    <span className="text-[9px] text-muted-foreground/60">log</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
+                    <span className="text-[9px] text-muted-foreground/60">snapshot</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400/50" />
+                    <span className="text-[9px] text-muted-foreground/60">manual</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }

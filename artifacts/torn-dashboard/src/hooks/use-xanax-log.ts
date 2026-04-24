@@ -24,7 +24,8 @@ function isXanaxEntry(e: LogEntry): boolean {
 
 export interface XanaxLogResult {
   todayCount: number;
-  dailyCounts: Record<string, number>; // "YYYY-MM-DD" -> count
+  dailyCounts: Record<string, number>;
+  lastUsedTimestamp: number | null; // unix seconds of most recent xanax use
 }
 
 export function useXanaxLog(apiKey: string | null) {
@@ -42,12 +43,12 @@ export function useXanaxLog(apiKey: string | null) {
 
       const entries = Object.values(data.log ?? {}) as LogEntry[];
 
-      // Debug: log all entries so we can inspect the exact title/category format
-      const sample = entries.slice(0, 20);
       console.log("[XanaxLog] total entries:", entries.length);
-      console.log("[XanaxLog] sample entries:", sample.map(e => ({ title: e.title, category: e.category, data: e.data })));
+      console.log("[XanaxLog] sample entries:", entries.slice(0, 20).map(e => ({ title: e.title, category: e.category, data: e.data })));
 
-      const xanaxEntries = entries.filter(isXanaxEntry);
+      const xanaxEntries = entries
+        .filter(isXanaxEntry)
+        .sort((a, b) => b.timestamp - a.timestamp); // newest first
 
       const dailyCounts: Record<string, number> = {};
       for (const entry of xanaxEntries) {
@@ -57,8 +58,9 @@ export function useXanaxLog(apiKey: string | null) {
 
       const today = getTodayStr();
       const todayCount = dailyCounts[today] ?? 0;
+      const lastUsedTimestamp = xanaxEntries[0]?.timestamp ?? null;
 
-      return { todayCount, dailyCounts };
+      return { todayCount, dailyCounts, lastUsedTimestamp };
     },
     enabled: !!apiKey,
     refetchInterval: 30000,
