@@ -433,7 +433,13 @@ export default function Dashboard() {
                         </Card>
                       )}
                       <Card className="bg-card shadow-sm">
-                        <CardContent className="p-3">
+                        <CardHeader className="p-3 pb-0">
+                          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                            <Coins className="w-3.5 h-3.5 text-green-500" />
+                            Wallet
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-3 pt-2">
                           <div className="grid grid-cols-2 gap-2">
                             <div>
                               <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Cash</div>
