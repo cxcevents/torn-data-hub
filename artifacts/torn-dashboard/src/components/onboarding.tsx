@@ -3,7 +3,7 @@ import { useApiKey } from "@/hooks/use-api-key";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { KeyRound, ExternalLink, ShieldAlert } from "lucide-react";
+import { KeyRound, ExternalLink, ShieldAlert, Info } from "lucide-react";
 
 export function Onboarding() {
   const { setApiKey } = useApiKey();
@@ -44,7 +44,7 @@ export function Onboarding() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col items-center gap-4 text-sm text-muted-foreground pt-4 pb-8">
+        <CardFooter className="flex flex-col items-center gap-3 text-sm text-muted-foreground pt-4 pb-8">
           <a
             href="https://www.torn.com/preferences.php#tab=api"
             target="_blank"
@@ -54,10 +54,15 @@ export function Onboarding() {
             Get your key from Torn Preferences <ExternalLink className="h-3 w-3" />
           </a>
           <div className="flex items-start gap-2 bg-muted/50 p-3 rounded-md w-full">
+            <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <p className="text-xs leading-relaxed">
+              A <span className="text-foreground font-semibold">Default</span> or <span className="text-foreground font-semibold">Full</span> access key is recommended for the best experience — it unlocks all panels including battle stats, networth, job points, and faction data. Limited keys will work but some panels may show no data.
+            </p>
+          </div>
+          <div className="flex items-start gap-2 bg-muted/50 p-3 rounded-md w-full">
             <ShieldAlert className="h-4 w-4 text-primary shrink-0 mt-0.5" />
             <p className="text-xs leading-relaxed">
-              Your key is stored securely in your browser's local storage and is never sent to any external server. 
-              All requests are made directly to api.torn.com.
+              Your key is never sent to any server. It's stored only in your browser's local storage, and all API calls go directly from your browser to api.torn.com.
             </p>
           </div>
         </CardFooter>
