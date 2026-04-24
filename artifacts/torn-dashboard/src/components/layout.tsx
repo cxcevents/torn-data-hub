@@ -1,13 +1,48 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useApiKey } from "@/hooks/use-api-key";
 import { Settings, Code, Moon, Sun, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useTornUser } from "@/hooks/use-torn-user";
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface LayoutProps {
   children: React.ReactNode;
+}
+
+interface NavIconProps {
+  href: string;
+  icon: React.ReactNode;
+  currentPath: string;
+  navigate: (to: string) => void;
+}
+
+function NavIcon({ href, icon, currentPath, navigate }: NavIconProps) {
+  const isActive = currentPath === href;
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isActive) {
+      navigate("/");
+    } else {
+      navigate(href);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      className={cn(
+        "h-9 w-9 flex items-center justify-center rounded-md transition-colors",
+        isActive
+          ? "bg-primary/15 text-primary"
+          : "text-muted-foreground hover:text-foreground hover:bg-accent"
+      )}
+    >
+      {icon}
+    </button>
+  );
 }
 
 export function Layout({ children }: LayoutProps) {
@@ -15,6 +50,7 @@ export function Layout({ children }: LayoutProps) {
   const { theme, setTheme } = useTheme();
   const { data, refetch, isFetching } = useTornUser(apiKey);
   const [nextRefresh, setNextRefresh] = useState(30);
+  const [location, navigate] = useLocation();
 
   useEffect(() => {
     if (!apiKey) return;
@@ -60,9 +96,9 @@ export function Layout({ children }: LayoutProps) {
                 <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{maskedKey}</span>
                 <div className="flex items-center gap-2">
                   <span>Auto-refresh in {nextRefresh}s</span>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={handleManualRefresh}
                     disabled={isFetching}
                     className="h-8 w-8"
@@ -74,16 +110,8 @@ export function Layout({ children }: LayoutProps) {
             )}
 
             <nav className="flex items-center gap-1">
-              <Link href="/raw">
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
-                  <Code className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="/settings">
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </Link>
+              <NavIcon href="/raw" icon={<Code className="h-4 w-4" />} currentPath={location} navigate={navigate} />
+              <NavIcon href="/settings" icon={<Settings className="h-4 w-4" />} currentPath={location} navigate={navigate} />
               <Button
                 variant="ghost"
                 size="icon"
