@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Torn Dashboard"
+version = "1.0.0"
+id = "artifacts/torn-dashboard"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19842
+
+[services.development]
+run = "pnpm --filter @workspace/torn-dashboard run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/torn-dashboard", "run", "build" ]
+publicDir = "artifacts/torn-dashboard/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19842"
+BASE_PATH = "/"
