@@ -20,9 +20,24 @@ export const TORN_SELECTIONS = [
   "medals",
   "merits",
   "refills",
-  "icons",
   "newevents",
-  "newmessages"
+  "newmessages",
+];
+
+const FALLBACK_SELECTIONS = [
+  "profile",
+  "bars",
+  "cooldowns",
+  "travel",
+  "education",
+  "events",
+  "messages",
+  "notifications",
+  "personalstats",
+  "merits",
+  "refills",
+  "newevents",
+  "newmessages",
 ];
 
 export function useTornUser(apiKey: string | null) {
@@ -30,11 +45,18 @@ export function useTornUser(apiKey: string | null) {
     queryKey: ["torn-user", apiKey],
     queryFn: async () => {
       if (!apiKey) throw new Error("No API key provided");
-      return fetchTorn(TORN_SELECTIONS, apiKey);
+      try {
+        return await fetchTorn(TORN_SELECTIONS, apiKey);
+      } catch (err: any) {
+        if (err?.message?.toLowerCase().includes("wrong") || err?.message?.toLowerCase().includes("field")) {
+          return await fetchTorn(FALLBACK_SELECTIONS, apiKey);
+        }
+        throw err;
+      }
     },
     enabled: !!apiKey,
     refetchInterval: 30000,
     staleTime: 15000,
-    retry: false, // Don't retry automatically on error (like invalid key)
+    retry: false,
   });
 }
