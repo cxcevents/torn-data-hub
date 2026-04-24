@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 
 const LOCK_EVENT = "torn_layout_lock_changed";
-const ORDER_KEY = "torn_layout_order";
+const ORDER_KEY = "torn_layout_order_v3";
 
 export type ColumnId = "left" | "right";
 
