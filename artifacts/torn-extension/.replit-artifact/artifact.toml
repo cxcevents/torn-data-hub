@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/extension/"
+title = "Torn Extension Preview"
+version = "1.0.0"
+id = "artifacts/torn-extension"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/extension/" ]
+localPort = 18777
+
+[services.development]
+run = "pnpm --filter @workspace/torn-extension run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/torn-extension", "run", "build" ]
+publicDir = "artifacts/torn-extension/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18777"
+BASE_PATH = "/extension/"
