@@ -4,7 +4,7 @@ import { useXanaxLog } from "./use-xanax-log";
 const XANAX_HISTORY_KEY = "torn_xanax_tracker_v1";
 const XANAX_MANUAL_KEY = "torn_xanax_manual_v1";
 
-type XanaxHistory = Record<string, number>; // "YYYY-MM-DD" -> latest cumulative total
+type XanaxHistory = Record<string, number>; // "YYYY-MM-DD" -> cumulative total
 type ManualCounts = Record<string, number>;
 
 export function getTodayStr(): string {
@@ -29,16 +29,16 @@ function loadManual(): ManualCounts {
 export interface XanaxDayEntry {
   date: string;
   count: number;
+  source: "log" | "snapshot" | "manual" | "unknown";
 }
 
 export function useXanaxTracker(apiKey: string | null, xantakenTotal: number | undefined) {
   const [history, setHistory] = useState<XanaxHistory>(loadHistory);
   const [manual, setManual] = useState<ManualCounts>(loadManual);
 
-  // Log-based today count (most accurate — uses timestamp-filtered API log)
-  const { data: logCount, isLoading: logLoading, isError: logError } = useXanaxLog(apiKey);
+  const { data: logData, isLoading: logLoading, isError: logError } = useXanaxLog(apiKey);
 
-  // Snapshot for monthly history
+  // Save API cumulative snapshot for future delta calculations
   useEffect(() => {
     if (xantakenTotal === undefined) return;
     const today = getTodayStr();
@@ -52,8 +52,9 @@ export function useXanaxTracker(apiKey: string | null, xantakenTotal: number | u
   }, [xantakenTotal]);
 
   const today = getTodayStr();
+  const logReady = !logLoading && !logError && logData !== undefined;
 
-  // Fallback delta count (from localStorage snapshots) for when log is unavailable
+  // Fallback delta from localStorage snapshots
   const deltaCount = useMemo(() => {
     if (xantakenTotal === undefined) return null;
     const dates = Object.keys(history).sort();
@@ -64,9 +65,10 @@ export function useXanaxTracker(apiKey: string | null, xantakenTotal: number | u
 
   const manualToday = manual[today] ?? 0;
 
-  // Priority: log API (most accurate) > delta (good) > manual (last resort)
-  const logReady = !logLoading && !logError && logCount !== undefined;
-  const todayCount: number = logReady ? logCount : (deltaCount ?? manualToday);
+  const todayCount: number = logReady
+    ? logData.todayCount
+    : (deltaCount ?? manualToday);
+
   const sourceIsLog = logReady;
   const sourceIsDelta = !logReady && deltaCount !== null;
   const sourceIsManual = !logReady && deltaCount === null;
@@ -81,15 +83,52 @@ export function useXanaxTracker(apiKey: string | null, xantakenTotal: number | u
     });
   }, [today]);
 
+  // Monthly history: log data takes priority; fall back to snapshot deltas; fall back to manual
   const monthData = useMemo((): XanaxDayEntry[] => {
-    const dates = Object.keys(history).sort();
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const daysInMonth = now.getDate();
     const result: XanaxDayEntry[] = [];
-    for (let i = 1; i < dates.length; i++) {
-      const count = Math.max(0, history[dates[i]] - history[dates[i - 1]]);
-      result.push({ date: dates[i], count });
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const isToday = dateStr === today;
+
+      if (isToday) {
+        result.push({ date: dateStr, count: todayCount, source: sourceIsLog ? "log" : sourceIsDelta ? "snapshot" : "manual" });
+        continue;
+      }
+
+      // Log-derived count for past days
+      if (logReady && logData.dailyCounts[dateStr] !== undefined) {
+        result.push({ date: dateStr, count: logData.dailyCounts[dateStr], source: "log" });
+        continue;
+      }
+
+      // Snapshot delta for past days
+      const snapDates = Object.keys(history).sort();
+      const idx = snapDates.indexOf(dateStr);
+      if (idx > 0) {
+        const prevSnap = history[snapDates[idx - 1]];
+        const thisSnap = history[dateStr];
+        if (prevSnap !== undefined && thisSnap !== undefined) {
+          result.push({ date: dateStr, count: Math.max(0, thisSnap - prevSnap), source: "snapshot" });
+          continue;
+        }
+      }
+
+      // Manual fallback
+      if (manual[dateStr] !== undefined) {
+        result.push({ date: dateStr, count: manual[dateStr], source: "manual" });
+        continue;
+      }
+
+      // No data available for this day
     }
-    return result.slice(-30);
-  }, [history]);
+
+    return result;
+  }, [logReady, logData, history, manual, today, todayCount, sourceIsLog, sourceIsDelta]);
 
   return { todayCount, sourceIsLog, sourceIsDelta, sourceIsManual, adjustManual, monthData, today, goal: 3 };
 }

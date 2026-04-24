@@ -63,12 +63,7 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
       const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       const entry = monthData.find((e) => e.date === dateStr);
       const isToday = dateStr === today;
-      return {
-        dateStr,
-        label: formatDate(dateStr),
-        count: isToday ? todayCount : entry?.count ?? null,
-        isToday,
-      };
+      return { dateStr, label: formatDate(dateStr), entry: entry ?? null, isToday };
     }).reverse();
   })();
 
@@ -142,7 +137,7 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
         {/* History toggle */}
         <button
           onClick={() => setHistoryOpen((v) => !v)}
-          className="w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors group pt-1 border-t border-border/40"
+          className="w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors pt-1 border-t border-border/40"
         >
           <span>This Month</span>
           <motion.div animate={{ rotate: historyOpen ? 0 : -90 }} transition={{ duration: 0.18 }}>
@@ -164,7 +159,7 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
                 {monthEntries.length === 0 ? (
                   <div className="text-[11px] text-muted-foreground text-center py-2">No data yet</div>
                 ) : (
-                  monthEntries.map(({ dateStr, label, count: dayCount, isToday }) => (
+                  monthEntries.map(({ dateStr, label, entry, isToday }) => (
                     <div
                       key={dateStr}
                       className={cn(
@@ -172,18 +167,30 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
                         isToday && "bg-primary/5 border border-primary/10"
                       )}
                     >
-                      <span className={cn("font-mono text-muted-foreground w-16", isToday && "text-primary font-bold")}>
-                        {isToday ? "Today" : label}
-                      </span>
-                      {dayCount !== null ? (
+                      <div className="flex items-center gap-1.5 w-16 flex-shrink-0">
+                        <span className={cn("font-mono text-muted-foreground", isToday && "text-primary font-bold")}>
+                          {isToday ? "Today" : label}
+                        </span>
+                      </div>
+                      {entry !== null ? (
                         <>
-                          <DayDots count={dayCount} goal={goal} />
-                          <span className={cn(
-                            "font-mono font-bold w-6 text-right",
-                            dayCount >= goal ? "text-green-400" : dayCount > 0 ? "text-amber-400" : "text-muted-foreground/50"
-                          )}>
-                            {dayCount}
-                          </span>
+                          <DayDots count={entry.count} goal={goal} />
+                          <div className="flex items-center gap-1.5">
+                            <span className={cn(
+                              "font-mono font-bold w-4 text-right",
+                              entry.count >= goal ? "text-green-400" : entry.count > 0 ? "text-amber-400" : "text-muted-foreground/50"
+                            )}>
+                              {entry.count}
+                            </span>
+                            {/* Source indicator dot */}
+                            <div
+                              title={entry.source === "log" ? "From API log" : entry.source === "snapshot" ? "From snapshot" : "Manual"}
+                              className={cn(
+                                "w-1 h-1 rounded-full flex-shrink-0",
+                                entry.source === "log" ? "bg-primary/60" : entry.source === "snapshot" ? "bg-muted-foreground/40" : "bg-amber-400/50"
+                              )}
+                            />
+                          </div>
                         </>
                       ) : (
                         <span className="text-[10px] text-muted-foreground/40 italic">no data</span>
@@ -191,6 +198,21 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
                     </div>
                   ))
                 )}
+              </div>
+              {/* Legend */}
+              <div className="flex items-center gap-3 pt-2 mt-1 border-t border-border/30">
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-primary/60" />
+                  <span className="text-[9px] text-muted-foreground/60">log</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
+                  <span className="text-[9px] text-muted-foreground/60">snapshot</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400/50" />
+                  <span className="text-[9px] text-muted-foreground/60">manual</span>
+                </div>
               </div>
             </motion.div>
           )}
