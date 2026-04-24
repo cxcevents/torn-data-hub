@@ -915,22 +915,17 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="p-3 pt-0 space-y-3">
               <div className="flex justify-between text-center gap-2">
-                <a href="https://www.torn.com/awards.php" target="_blank" rel="noreferrer" className="flex-1 bg-muted/30 rounded p-1.5 border border-border/50 hover:border-yellow-500/40 transition-colors">
-                  <div className="text-sm font-mono font-bold text-yellow-400">{data.awards || 0}</div>
-                  <div className="text-[9px] uppercase font-bold text-muted-foreground">Awards</div>
-                </a>
-                <div className="flex-1 bg-muted/30 rounded p-1.5 border border-border/50">
-                  <div className="text-sm font-mono font-bold text-foreground">{medalsCount}</div>
-                  <div className="text-[9px] uppercase font-bold text-muted-foreground">Medals</div>
-                </div>
-                <div className="flex-1 bg-muted/30 rounded p-1.5 border border-border/50">
-                  <div className="text-sm font-mono font-bold text-foreground">{meritCount}</div>
-                  <div className="text-[9px] uppercase font-bold text-muted-foreground">Merits</div>
-                </div>
-                <div className="flex-1 bg-muted/30 rounded p-1.5 border border-border/50">
-                  <div className="text-sm font-mono font-bold text-foreground">{perksCount}</div>
-                  <div className="text-[9px] uppercase font-bold text-muted-foreground">Perks</div>
-                </div>
+                {[
+                  { href: "https://www.torn.com/awards.php", value: data.awards || 0, label: "Awards" },
+                  { href: "https://www.torn.com/medals.php", value: medalsCount, label: "Medals" },
+                  { href: "https://www.torn.com/merits.php", value: meritCount, label: "Merits" },
+                  { href: "https://www.torn.com/perks.php", value: perksCount, label: "Perks" },
+                ].map(({ href, value, label }) => (
+                  <a key={label} href={href} target="_blank" rel="noreferrer" className="flex-1 bg-muted/30 rounded p-1.5 border border-border/50 hover:border-primary/40 hover:bg-muted/50 transition-colors">
+                    <div className="text-sm font-mono font-bold text-foreground">{value}</div>
+                    <div className="text-[9px] uppercase font-bold text-muted-foreground">{label}</div>
+                  </a>
+                ))}
               </div>
 
               {jobPointsList.length > 0 && <CompactList title="Job Points" items={jobPointsList} icon={Briefcase} />}
