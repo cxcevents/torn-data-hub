@@ -377,111 +377,113 @@ export default function Dashboard() {
               {order.left.map((panelId) => (
                 <SortablePanel key={panelId} id={panelId} locked={locked}>
 
-                  {/* BARS & VITALS */}
-                  {panelId === "vitals" && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card className="bg-card shadow-sm">
-              <CardHeader className="p-3 pb-0">
-                <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Activity className="w-3.5 h-3.5 text-primary" />
-                  Vitals
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 pt-3 space-y-3">
-                {data.life && <ProgressBar label="Life" current={data.life.current} max={data.life.maximum} timeRemainingSeconds={data.life.fulltime} tick={tick} colorClass="bg-blue-500" />}
-                {data.energy && (
-                  <ProgressBar
-                    label="Energy" current={data.energy.current} max={data.energy.maximum}
-                    timeRemainingSeconds={data.energy.fulltime} tick={tick} colorClass="bg-green-500"
-                    flashWhenFull actionHref="https://www.torn.com/gym.php" actionLabel="Train"
-                    actionInline
-                  />
-                )}
-                {data.nerve && (
-                  <ProgressBar
-                    label="Nerve" current={data.nerve.current} max={data.nerve.maximum}
-                    timeRemainingSeconds={data.nerve.fulltime} tick={tick} colorClass="bg-red-500"
-                    flashWhenFull actionHref="https://www.torn.com/crimes.php" actionLabel="Commit Crime"
-                    actionInline
-                  />
-                )}
-                {data.happy && <ProgressBar label="Happy" current={data.happy.current} max={data.happy.maximum} timeRemainingSeconds={data.happy.fulltime} tick={tick} colorClass="bg-yellow-500" />}
-              </CardContent>
-            </Card>
-
-            <div className="space-y-4">
-              {/* CHAIN & TRAVEL - Dynamic conditional sections */}
-              {data.chain && data.chain.current > 0 && (
-                <Card className="bg-purple-500/5 border-purple-500/20">
-                  <CardContent className="p-3">
-                    <ProgressBar label={`Chain (x${data.chain.modifier})`} current={data.chain.current} max={data.chain.maximum} timeRemainingSeconds={data.chain.timeout} tick={tick} colorClass="bg-purple-500" />
-                  </CardContent>
-                </Card>
-              )}
-
-              {data.travel && data.travel.time_left > 0 && (
-                <Card className="bg-blue-500/5 border-blue-500/20">
-                  <CardContent className="p-3 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <Plane className="w-4 h-4 text-blue-400" />
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400">To {data.travel.destination}</span>
-                    </div>
-                    <span className="font-mono text-sm font-bold text-blue-400">
-                      {formatTimeRemaining(Math.max(0, data.travel.time_left - tick))}
-                    </span>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* WALLET MINI */}
-              <Card className="bg-card shadow-sm">
-                <CardContent className="p-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Cash</div>
-                      <div className="font-mono text-sm font-bold text-green-400">{formatNumber(data.money_onhand || 0, true)}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Points</div>
-                      <div className="font-mono text-sm font-bold text-primary">{formatNumber(data.points || 0)}</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* COOLDOWNS MINI */}
-              <Card className="bg-card shadow-sm">
-                <CardContent className="p-3 py-2 text-[11px] space-y-1">
-                  {[
-                    { label: "Drug", val: data.cooldowns?.drug, readyHref: "https://www.torn.com/item.php#drugs-items", readyLabel: "Use Drug" },
-                    { label: "Medical", val: data.cooldowns?.medical },
-                    { label: "Booster", val: data.cooldowns?.booster }
-                  ].map(cd => {
-                    const remaining = Math.max(0, (cd.val || 0) - tick);
-                    const isReady = remaining <= 0;
-                    return (
-                      <div key={cd.label} className="flex justify-between items-center">
-                        <span className="text-muted-foreground font-bold uppercase tracking-wider">{cd.label}</span>
-                        {isReady && cd.readyHref ? (
-                          <a
-                            href={cd.readyHref}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="font-bold text-[9px] uppercase tracking-widest px-2 py-0.5 rounded border border-yellow-500/40 bg-yellow-500/10 text-yellow-400 animate-pulse hover:opacity-80 transition-opacity"
-                          >
-                            {cd.readyLabel}
-                          </a>
-                        ) : (
-                          <span className={cn("font-mono font-bold", isReady ? "text-muted-foreground opacity-50" : "text-yellow-500")}>
-                            {isReady ? "RDY" : formatTimeRemaining(remaining)}
-                          </span>
+                  {/* VITALS CARD */}
+                  {panelId === "vitals" && (
+                    <Card className="bg-card shadow-sm">
+                      <CardHeader className="p-3 pb-0">
+                        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                          <Activity className="w-3.5 h-3.5 text-primary" />
+                          Vitals
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-3 pt-3 space-y-3">
+                        {data.life && <ProgressBar label="Life" current={data.life.current} max={data.life.maximum} timeRemainingSeconds={data.life.fulltime} tick={tick} colorClass="bg-blue-500" />}
+                        {data.energy && (
+                          <ProgressBar
+                            label="Energy" current={data.energy.current} max={data.energy.maximum}
+                            timeRemainingSeconds={data.energy.fulltime} tick={tick} colorClass="bg-green-500"
+                            flashWhenFull actionHref="https://www.torn.com/gym.php" actionLabel="Train"
+                            actionInline
+                          />
                         )}
+                        {data.nerve && (
+                          <ProgressBar
+                            label="Nerve" current={data.nerve.current} max={data.nerve.maximum}
+                            timeRemainingSeconds={data.nerve.fulltime} tick={tick} colorClass="bg-red-500"
+                            flashWhenFull actionHref="https://www.torn.com/crimes.php" actionLabel="Commit Crime"
+                            actionInline
+                          />
+                        )}
+                        {data.happy && <ProgressBar label="Happy" current={data.happy.current} max={data.happy.maximum} timeRemainingSeconds={data.happy.fulltime} tick={tick} colorClass="bg-yellow-500" />}
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* WALLET, COOLDOWNS, CHAIN & TRAVEL */}
+                  {panelId === "vitals-side" && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-4">
+                        {data.chain && data.chain.current > 0 && (
+                          <Card className="bg-purple-500/5 border-purple-500/20">
+                            <CardContent className="p-3">
+                              <ProgressBar label={`Chain (x${data.chain.modifier})`} current={data.chain.current} max={data.chain.maximum} timeRemainingSeconds={data.chain.timeout} tick={tick} colorClass="bg-purple-500" />
+                            </CardContent>
+                          </Card>
+                        )}
+                        {data.travel && data.travel.time_left > 0 && (
+                          <Card className="bg-blue-500/5 border-blue-500/20">
+                            <CardContent className="p-3 flex justify-between items-center">
+                              <div className="flex items-center gap-2">
+                                <Plane className="w-4 h-4 text-blue-400" />
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400">To {data.travel.destination}</span>
+                              </div>
+                              <span className="font-mono text-sm font-bold text-blue-400">
+                                {formatTimeRemaining(Math.max(0, data.travel.time_left - tick))}
+                              </span>
+                            </CardContent>
+                          </Card>
+                        )}
+                        {/* WALLET MINI */}
+                        <Card className="bg-card shadow-sm">
+                          <CardContent className="p-3">
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Cash</div>
+                                <div className="font-mono text-sm font-bold text-green-400">{formatNumber(data.money_onhand || 0, true)}</div>
+                              </div>
+                              <div>
+                                <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Points</div>
+                                <div className="font-mono text-sm font-bold text-primary">{formatNumber(data.points || 0)}</div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
                       </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            </div>
-          </div>}
+
+                      {/* COOLDOWNS MINI */}
+                      <Card className="bg-card shadow-sm">
+                        <CardContent className="p-3 py-2 text-[11px] space-y-1">
+                          {[
+                            { label: "Drug", val: data.cooldowns?.drug, readyHref: "https://www.torn.com/item.php#drugs-items", readyLabel: "Use Drug" },
+                            { label: "Medical", val: data.cooldowns?.medical },
+                            { label: "Booster", val: data.cooldowns?.booster }
+                          ].map(cd => {
+                            const remaining = Math.max(0, (cd.val || 0) - tick);
+                            const isReady = remaining <= 0;
+                            return (
+                              <div key={cd.label} className="flex justify-between items-center">
+                                <span className="text-muted-foreground font-bold uppercase tracking-wider">{cd.label}</span>
+                                {isReady && cd.readyHref ? (
+                                  <a
+                                    href={cd.readyHref}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="font-bold text-[9px] uppercase tracking-widest px-2 py-0.5 rounded border border-yellow-500/40 bg-yellow-500/10 text-yellow-400 animate-pulse hover:opacity-80 transition-opacity"
+                                  >
+                                    {cd.readyLabel}
+                                  </a>
+                                ) : (
+                                  <span className={cn("font-mono font-bold", isReady ? "text-muted-foreground opacity-50" : "text-yellow-500")}>
+                                    {isReady ? "RDY" : formatTimeRemaining(remaining)}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </CardContent>
+                      </Card>
+                    </div>
+                  )}
 
                   {/* STATS & ASSETS */}
                   {panelId === "stats-assets" && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

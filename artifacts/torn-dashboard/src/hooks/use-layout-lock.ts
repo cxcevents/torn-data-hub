@@ -6,14 +6,20 @@ const ORDER_KEY = "torn_layout_order";
 export type ColumnId = "left" | "right";
 
 const DEFAULT_ORDER: Record<ColumnId, string[]> = {
-  left: ["vitals", "stats-assets", "events-messages"],
+  left: ["vitals", "vitals-side", "stats-assets", "events-messages"],
   right: ["alerts", "refills", "achievements", "selected-stats"],
 };
 
 function loadOrder(): Record<ColumnId, string[]> {
   try {
     const raw = localStorage.getItem(ORDER_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Record<ColumnId, string[]>;
+      const allPresent = (Object.keys(DEFAULT_ORDER) as ColumnId[]).every(col =>
+        DEFAULT_ORDER[col].every(id => parsed[col]?.includes(id))
+      );
+      if (allPresent) return parsed;
+    }
   } catch {}
   return DEFAULT_ORDER;
 }
