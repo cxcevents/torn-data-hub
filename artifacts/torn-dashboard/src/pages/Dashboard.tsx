@@ -230,6 +230,19 @@ function CompactList({ title, items, icon: Icon }: { title: string, items: {labe
   );
 }
 
+function formatAge(days: number, expanded: boolean): string {
+  if (!expanded) return `${days}d`;
+  const years = Math.floor(days / 365);
+  const rem1 = days - years * 365;
+  const months = Math.floor(rem1 / 30);
+  const rem2 = rem1 - months * 30;
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years}yr`);
+  if (months > 0) parts.push(`${months}mo`);
+  if (rem2 > 0 || parts.length === 0) parts.push(`${rem2}d`);
+  return parts.join(" ");
+}
+
 export default function Dashboard() {
   const { apiKey } = useApiKey();
   const { data, isLoading, error, isFetching } = useTornUser(apiKey);
@@ -237,6 +250,7 @@ export default function Dashboard() {
   const { data: factionData } = useFaction(apiKey, data?.faction?.faction_id);
   const tick = useTick();
   const { locked, order, reorder } = useLayoutLock();
+  const [ageExpanded, setAgeExpanded] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -332,10 +346,14 @@ export default function Dashboard() {
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
                 LVL {data.level}
               </span>
-              <span className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
-                <Calendar className="w-3 h-3" />
-                {data.age}d
-              </span>
+              <button
+                onClick={() => setAgeExpanded(v => !v)}
+                className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono hover:text-foreground transition-colors cursor-pointer"
+                title={ageExpanded ? "Show days" : "Show years/months/days"}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                {formatAge(data.age, ageExpanded)}
+              </button>
             </div>
           </div>
 
