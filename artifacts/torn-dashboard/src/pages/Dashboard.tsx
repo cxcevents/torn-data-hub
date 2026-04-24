@@ -10,7 +10,7 @@ import { Onboarding } from "@/components/onboarding";
 import { Link } from "wouter";
 import { 
   AlertCircle, Terminal, Activity, Shield, Swords, Clock, Plane, 
-  GraduationCap, Banknote, Coins, Bell, Calendar, Award,
+  GraduationCap, Banknote, Coins, Calendar, Award,
   BatteryCharging, Briefcase, Medal, Star, Move, Users, CalendarDays, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -784,36 +784,6 @@ export default function Dashboard() {
               {order.right.map((panelId) => (
                 <SortablePanel key={panelId} id={panelId} locked={locked}>
 
-                  {/* NOTIFICATIONS */}
-                  {panelId === "alerts" && <Card className="bg-card shadow-sm border-primary/20">
-            <CardHeader className="p-3 pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                <Bell className="w-3.5 h-3.5 text-primary" />
-                Alerts
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 pt-0">
-              <div className="grid grid-cols-4 gap-1.5 text-center">
-                <a href="https://www.torn.com/messages.php" target="_blank" rel="noreferrer" className="bg-muted/50 rounded py-1.5 border border-border/50 hover-elevate">
-                  <div className="text-[9px] font-bold text-muted-foreground uppercase">Messages</div>
-                  <div className={cn("font-mono text-sm font-bold", data.notifications?.messages > 0 ? "text-primary" : "text-foreground")}>{data.notifications?.messages || 0}</div>
-                </a>
-                <a href="https://www.torn.com/events.php" target="_blank" rel="noreferrer" className="bg-muted/50 rounded py-1.5 border border-border/50 hover-elevate">
-                  <div className="text-[9px] font-bold text-muted-foreground uppercase">Events</div>
-                  <div className={cn("font-mono text-sm font-bold", data.notifications?.events > 0 ? "text-primary" : "text-foreground")}>{data.notifications?.events || 0}</div>
-                </a>
-                <a href="https://www.torn.com/awards.php" target="_blank" rel="noreferrer" className="bg-muted/50 rounded py-1.5 border border-border/50 hover-elevate">
-                  <div className="text-[9px] font-bold text-muted-foreground uppercase">Awards</div>
-                  <div className={cn("font-mono text-sm font-bold", data.notifications?.awards > 0 ? "text-yellow-500" : "text-foreground")}>{data.notifications?.awards || 0}</div>
-                </a>
-                <a href="https://www.torn.com/competition.php" target="_blank" rel="noreferrer" className="bg-muted/50 rounded py-1.5 border border-border/50 hover-elevate">
-                  <div className="text-[9px] font-bold text-muted-foreground uppercase">Comps</div>
-                  <div className="font-mono text-sm font-bold text-foreground">{data.notifications?.competition || 0}</div>
-                </a>
-              </div>
-            </CardContent>
-          </Card>}
-
                   {/* REFILLS & USAGE */}
                   {panelId === "refills" && <Card className="bg-card shadow-sm">
             <CardHeader className="p-3 pb-2">
@@ -880,6 +850,10 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="p-3 pt-0 space-y-3">
               <div className="flex justify-between text-center gap-2">
+                <a href="https://www.torn.com/awards.php" target="_blank" rel="noreferrer" className="flex-1 bg-muted/30 rounded p-1.5 border border-border/50 hover:border-yellow-500/40 transition-colors">
+                  <div className="text-sm font-mono font-bold text-yellow-400">{data.awards || 0}</div>
+                  <div className="text-[9px] uppercase font-bold text-muted-foreground">Awards</div>
+                </a>
                 <div className="flex-1 bg-muted/30 rounded p-1.5 border border-border/50">
                   <div className="text-sm font-mono font-bold text-foreground">{medalsCount}</div>
                   <div className="text-[9px] uppercase font-bold text-muted-foreground">Medals</div>
