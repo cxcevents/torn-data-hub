@@ -80,9 +80,9 @@ function MeritUpgrades({ merits }: { merits: Record<string, number> | undefined 
               ? "bg-primary/20 border-primary/40 text-primary"
               : "bg-muted/40 border-border text-muted-foreground hover-elevate"
           )}
-          title={onlySet ? "Showing only merits you've spent on" : "Showing all merits"}
+          title={onlySet ? "Showing only upgraded merits — click to show all" : "Showing all merits — click to show upgraded only"}
         >
-          {onlySet ? "Only Set" : "Showing All"}
+          {onlySet ? "Upgraded" : "Showing All"}
         </button>
       </div>
       <div className="space-y-1.5 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
@@ -94,7 +94,7 @@ function MeritUpgrades({ merits }: { merits: Record<string, number> | undefined 
         ))}
         {filtered.length === 0 && (
           <div className="text-[11px] text-muted-foreground text-center py-2">
-            {onlySet ? "No merits with points spent" : "None"}
+            {onlySet ? "No upgraded merits" : "None"}
           </div>
         )}
       </div>
