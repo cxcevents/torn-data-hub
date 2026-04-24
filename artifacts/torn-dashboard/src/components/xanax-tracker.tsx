@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useXanaxTracker } from "@/hooks/use-xanax-tracker";
+import { useApiKey } from "@/hooks/use-api-key";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pill, ChevronDown, Plus, Minus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,9 +20,7 @@ function DayDots({ count, goal }: { count: number; goal: number }) {
           key={i}
           className={cn(
             "w-2 h-2 rounded-full border",
-            i < count
-              ? "bg-primary border-primary"
-              : "bg-transparent border-border/50"
+            i < count ? "bg-primary border-primary" : "bg-transparent border-border/50"
           )}
         />
       ))}
@@ -33,27 +32,25 @@ function DayDots({ count, goal }: { count: number; goal: number }) {
 }
 
 export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefined }) {
-  const { todayCount, hasBaseline, adjustManual, monthData, today, goal } = useXanaxTracker(xantakenTotal);
+  const { apiKey } = useApiKey();
+  const { todayCount, sourceIsLog, sourceIsManual, adjustManual, monthData, today, goal } =
+    useXanaxTracker(apiKey, xantakenTotal);
+
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  const count = todayCount ?? 0;
-  const pct = Math.min(100, (count / goal) * 100);
-  const metGoal = count >= goal;
+  const pct = Math.min(100, (todayCount / goal) * 100);
+  const metGoal = todayCount >= goal;
 
   const barColor = metGoal
     ? "bg-green-500"
-    : count >= 2
-    ? "bg-amber-400"
-    : count >= 1
-    ? "bg-orange-500"
+    : todayCount >= 2 ? "bg-amber-400"
+    : todayCount >= 1 ? "bg-orange-500"
     : "bg-red-500/50";
 
   const countColor = metGoal
     ? "text-green-400"
-    : count >= 2
-    ? "text-amber-400"
-    : count >= 1
-    ? "text-orange-400"
+    : todayCount >= 2 ? "text-amber-400"
+    : todayCount >= 1 ? "text-orange-400"
     : "text-muted-foreground";
 
   const monthEntries = (() => {
@@ -61,7 +58,6 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
     const year = now.getFullYear();
     const month = now.getMonth();
     const todayDay = now.getDate();
-
     return Array.from({ length: todayDay }, (_, i) => {
       const day = i + 1;
       const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
@@ -70,7 +66,7 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
       return {
         dateStr,
         label: formatDate(dateStr),
-        count: isToday ? count : entry?.count ?? null,
+        count: isToday ? todayCount : entry?.count ?? null,
         isToday,
       };
     }).reverse();
@@ -79,19 +75,24 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
   return (
     <Card className="bg-card shadow-sm">
       <CardHeader className="p-3 pb-0">
-        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-          <Pill className="w-3.5 h-3.5 text-primary" />
-          Xanax
+        <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Pill className="w-3.5 h-3.5 text-primary" />
+            Xanax
+          </div>
+          {sourceIsLog && (
+            <span className="text-[9px] font-bold text-primary/60 uppercase tracking-wider">Live</span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-3 pt-2 space-y-3">
 
-        {/* Today */}
+        {/* Today count + progress */}
         <div className="space-y-2">
           <div className="flex items-end justify-between">
             <div className="flex items-baseline gap-1.5">
               <span className={cn("text-3xl font-black font-mono leading-none", countColor)}>
-                {count}
+                {todayCount}
               </span>
               <span className="text-sm text-muted-foreground font-bold">/ {goal} today</span>
             </div>
@@ -101,11 +102,10 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
                 ? "text-green-400 border-green-500/30 bg-green-500/10"
                 : "text-muted-foreground border-border/30 bg-muted/20"
             )}>
-              {metGoal ? "Goal Met" : `${goal - count} to go`}
+              {metGoal ? "Goal Met" : `${goal - todayCount} to go`}
             </span>
           </div>
 
-          {/* Progress bar */}
           <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
             <motion.div
               className={cn("h-full rounded-full", barColor)}
@@ -114,30 +114,30 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
               transition={{ duration: 0.5, ease: "easeOut" }}
             />
           </div>
-
-          {/* Manual controls — shown when no baseline yet */}
-          {!hasBaseline && (
-            <div className="flex items-center justify-between rounded-md bg-muted/30 border border-border/40 px-2 py-1.5">
-              <span className="text-[10px] text-muted-foreground leading-tight">
-                Taken today? Log manually until tomorrow's baseline is ready.
-              </span>
-              <div className="flex items-center gap-1 flex-shrink-0 ml-2">
-                <button
-                  onClick={() => adjustManual(-1)}
-                  className="w-5 h-5 rounded flex items-center justify-center bg-muted/60 hover:bg-muted border border-border/50 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <Minus className="w-2.5 h-2.5" />
-                </button>
-                <button
-                  onClick={() => adjustManual(1)}
-                  className="w-5 h-5 rounded flex items-center justify-center bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary transition-colors"
-                >
-                  <Plus className="w-2.5 h-2.5" />
-                </button>
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* Manual controls — only shown when log & delta both unavailable */}
+        {sourceIsManual && (
+          <div className="flex items-center justify-between rounded-md bg-muted/30 border border-border/40 px-2 py-1.5">
+            <span className="text-[10px] text-muted-foreground leading-tight">
+              Log unavailable — enter manually.
+            </span>
+            <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+              <button
+                onClick={() => adjustManual(-1)}
+                className="w-5 h-5 rounded flex items-center justify-center bg-muted/60 hover:bg-muted border border-border/50 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Minus className="w-2.5 h-2.5" />
+              </button>
+              <button
+                onClick={() => adjustManual(1)}
+                className="w-5 h-5 rounded flex items-center justify-center bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary transition-colors"
+              >
+                <Plus className="w-2.5 h-2.5" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* History toggle */}
         <button

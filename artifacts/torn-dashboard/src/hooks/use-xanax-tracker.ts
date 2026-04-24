@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useXanaxLog } from "./use-xanax-log";
 
 const XANAX_HISTORY_KEY = "torn_xanax_tracker_v1";
 const XANAX_MANUAL_KEY = "torn_xanax_manual_v1";
 
-type XanaxHistory = Record<string, number>; // "YYYY-MM-DD" -> latest cumulative total that day
-type ManualCounts = Record<string, number>;  // "YYYY-MM-DD" -> manual count for that day
+type XanaxHistory = Record<string, number>; // "YYYY-MM-DD" -> latest cumulative total
+type ManualCounts = Record<string, number>;
 
 export function getTodayStr(): string {
   const d = new Date();
@@ -15,18 +16,14 @@ function loadHistory(): XanaxHistory {
   try {
     const raw = localStorage.getItem(XANAX_HISTORY_KEY);
     return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+  } catch { return {}; }
 }
 
 function loadManual(): ManualCounts {
   try {
     const raw = localStorage.getItem(XANAX_MANUAL_KEY);
     return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
+  } catch { return {}; }
 }
 
 export interface XanaxDayEntry {
@@ -34,11 +31,14 @@ export interface XanaxDayEntry {
   count: number;
 }
 
-export function useXanaxTracker(xantakenTotal: number | undefined) {
+export function useXanaxTracker(apiKey: string | null, xantakenTotal: number | undefined) {
   const [history, setHistory] = useState<XanaxHistory>(loadHistory);
   const [manual, setManual] = useState<ManualCounts>(loadManual);
 
-  // Save API snapshot each refresh
+  // Log-based today count (most accurate — uses timestamp-filtered API log)
+  const { data: logCount, isLoading: logLoading, isError: logError } = useXanaxLog(apiKey);
+
+  // Snapshot for monthly history
   useEffect(() => {
     if (xantakenTotal === undefined) return;
     const today = getTodayStr();
@@ -53,8 +53,8 @@ export function useXanaxTracker(xantakenTotal: number | undefined) {
 
   const today = getTodayStr();
 
-  // API-derived count: delta from yesterday's snapshot to today's latest
-  const apiCount = useMemo(() => {
+  // Fallback delta count (from localStorage snapshots) for when log is unavailable
+  const deltaCount = useMemo(() => {
     if (xantakenTotal === undefined) return null;
     const dates = Object.keys(history).sort();
     const prevDate = dates.filter((d) => d < today).pop();
@@ -63,10 +63,13 @@ export function useXanaxTracker(xantakenTotal: number | undefined) {
   }, [history, xantakenTotal, today]);
 
   const manualToday = manual[today] ?? 0;
-  const hasBaseline = apiCount !== null;
 
-  // What we actually display: API count if baseline exists, else manual
-  const todayCount = hasBaseline ? apiCount : manualToday;
+  // Priority: log API (most accurate) > delta (good) > manual (last resort)
+  const logReady = !logLoading && !logError && logCount !== undefined;
+  const todayCount: number = logReady ? logCount : (deltaCount ?? manualToday);
+  const sourceIsLog = logReady;
+  const sourceIsDelta = !logReady && deltaCount !== null;
+  const sourceIsManual = !logReady && deltaCount === null;
 
   const adjustManual = useCallback((delta: number) => {
     setManual((prev) => {
@@ -88,5 +91,5 @@ export function useXanaxTracker(xantakenTotal: number | undefined) {
     return result.slice(-30);
   }, [history]);
 
-  return { todayCount, hasBaseline, adjustManual, monthData, today, goal: 3 };
+  return { todayCount, sourceIsLog, sourceIsDelta, sourceIsManual, adjustManual, monthData, today, goal: 3 };
 }
