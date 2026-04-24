@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useXanaxTracker } from "@/hooks/use-xanax-tracker";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Pill, ChevronDown } from "lucide-react";
+import { Pill, ChevronDown, Plus, Minus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -33,13 +33,12 @@ function DayDots({ count, goal }: { count: number; goal: number }) {
 }
 
 export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefined }) {
-  const { todayCount, monthData, today, goal } = useXanaxTracker(xantakenTotal);
+  const { todayCount, hasBaseline, adjustManual, monthData, today, goal } = useXanaxTracker(xantakenTotal);
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const count = todayCount ?? 0;
   const pct = Math.min(100, (count / goal) * 100);
   const metGoal = count >= goal;
-  const unknown = todayCount === null;
 
   const barColor = metGoal
     ? "bg-green-500"
@@ -57,12 +56,10 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
     ? "text-orange-400"
     : "text-muted-foreground";
 
-  // Get days in current month with data, show blanks for days without data
   const monthEntries = (() => {
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
     const todayDay = now.getDate();
 
     return Array.from({ length: todayDay }, (_, i) => {
@@ -94,7 +91,7 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
           <div className="flex items-end justify-between">
             <div className="flex items-baseline gap-1.5">
               <span className={cn("text-3xl font-black font-mono leading-none", countColor)}>
-                {unknown ? "—" : count}
+                {count}
               </span>
               <span className="text-sm text-muted-foreground font-bold">/ {goal} today</span>
             </div>
@@ -102,11 +99,9 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
               "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border",
               metGoal
                 ? "text-green-400 border-green-500/30 bg-green-500/10"
-                : unknown
-                ? "text-muted-foreground/50 border-border/30 bg-muted/20"
                 : "text-muted-foreground border-border/30 bg-muted/20"
             )}>
-              {metGoal ? "Goal Met" : unknown ? "No baseline" : `${goal - count} to go`}
+              {metGoal ? "Goal Met" : `${goal - count} to go`}
             </span>
           </div>
 
@@ -120,10 +115,27 @@ export function XanaxTracker({ xantakenTotal }: { xantakenTotal: number | undefi
             />
           </div>
 
-          {unknown && (
-            <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
-              Open the dashboard on two consecutive days to establish your baseline.
-            </p>
+          {/* Manual controls — shown when no baseline yet */}
+          {!hasBaseline && (
+            <div className="flex items-center justify-between rounded-md bg-muted/30 border border-border/40 px-2 py-1.5">
+              <span className="text-[10px] text-muted-foreground leading-tight">
+                Taken today? Log manually until tomorrow's baseline is ready.
+              </span>
+              <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                <button
+                  onClick={() => adjustManual(-1)}
+                  className="w-5 h-5 rounded flex items-center justify-center bg-muted/60 hover:bg-muted border border-border/50 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Minus className="w-2.5 h-2.5" />
+                </button>
+                <button
+                  onClick={() => adjustManual(1)}
+                  className="w-5 h-5 rounded flex items-center justify-center bg-primary/20 hover:bg-primary/30 border border-primary/30 text-primary transition-colors"
+                >
+                  <Plus className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            </div>
           )}
         </div>
 
