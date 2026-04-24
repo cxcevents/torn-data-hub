@@ -105,33 +105,69 @@ function StatBox({ label, value, icon: Icon, subValue }: { label: string, value:
   );
 }
 
-function ProgressBar({ label, current, max, colorClass, timeRemainingSeconds, tick }: { label: string, current: number, max: number, colorClass: string, timeRemainingSeconds?: number, tick: number }) {
+function ProgressBar({
+  label, current, max, colorClass, timeRemainingSeconds, tick,
+  flashWhenFull, actionHref, actionLabel,
+}: {
+  label: string; current: number; max: number; colorClass: string;
+  timeRemainingSeconds?: number; tick: number;
+  flashWhenFull?: boolean; actionHref?: string; actionLabel?: string;
+}) {
   const percentage = Math.min(100, Math.max(0, (current / max) * 100));
-  
   let displayTime = "";
   let isFull = current >= max;
-  
+
   if (timeRemainingSeconds && timeRemainingSeconds > 0 && !isFull) {
     const adjustedTime = Math.max(0, timeRemainingSeconds - tick);
     displayTime = formatTimeRemaining(adjustedTime);
     if (adjustedTime <= 0) isFull = true;
   }
 
+  const textColorClass = colorClass.replace("bg-", "text-");
+  const showAction = isFull && actionHref;
+
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between text-[11px] font-medium">
         <span className="uppercase tracking-wider text-muted-foreground">{label}</span>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <span className="font-mono text-foreground">{current} / {max}</span>
           {!isFull && displayTime && <span className="text-muted-foreground font-mono">{displayTime}</span>}
-          {isFull && <span className={cn("font-bold text-[10px]", colorClass.replace('bg-', 'text-'))}>FULL</span>}
+          {isFull && <span className={cn("font-bold text-[10px] uppercase tracking-wider", textColorClass, flashWhenFull && "animate-pulse")}>FULL</span>}
         </div>
       </div>
-      <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-        <div 
-          className={cn("h-full transition-all duration-1000 ease-linear", colorClass, isFull && "animate-pulse shadow-[0_0_10px_rgba(var(--primary),0.5)]")} 
-          style={{ width: `${percentage}%` }}
-        />
+
+      <div className="relative">
+        <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+          <div
+            className={cn(
+              "h-full transition-all duration-1000 ease-linear",
+              colorClass,
+              isFull && flashWhenFull && "animate-pulse"
+            )}
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+
+        {showAction && (
+          <div className="absolute inset-x-0 -top-0.5 flex justify-center pointer-events-none">
+            <a
+              href={actionHref}
+              target="_blank"
+              rel="noreferrer"
+              className={cn(
+                "pointer-events-auto -translate-y-1/2 px-2.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest",
+                "border animate-pulse cursor-pointer transition-opacity hover:opacity-80",
+                textColorClass,
+                colorClass.replace("bg-", "border-") + "/40",
+                colorClass.replace("bg-", "bg-") + "/10"
+              )}
+              style={{ marginTop: "0.75rem" }}
+            >
+              {actionLabel ?? "Go"}
+            </a>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -300,8 +336,20 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="p-3 pt-3 space-y-3">
                 {data.life && <ProgressBar label="Life" current={data.life.current} max={data.life.maximum} timeRemainingSeconds={data.life.fulltime} tick={tick} colorClass="bg-blue-500" />}
-                {data.energy && <ProgressBar label="Energy" current={data.energy.current} max={data.energy.maximum} timeRemainingSeconds={data.energy.fulltime} tick={tick} colorClass="bg-green-500" />}
-                {data.nerve && <ProgressBar label="Nerve" current={data.nerve.current} max={data.nerve.maximum} timeRemainingSeconds={data.nerve.fulltime} tick={tick} colorClass="bg-red-500" />}
+                {data.energy && (
+                  <ProgressBar
+                    label="Energy" current={data.energy.current} max={data.energy.maximum}
+                    timeRemainingSeconds={data.energy.fulltime} tick={tick} colorClass="bg-green-500"
+                    flashWhenFull actionHref="https://www.torn.com/gym.php" actionLabel="Train"
+                  />
+                )}
+                {data.nerve && (
+                  <ProgressBar
+                    label="Nerve" current={data.nerve.current} max={data.nerve.maximum}
+                    timeRemainingSeconds={data.nerve.fulltime} tick={tick} colorClass="bg-red-500"
+                    flashWhenFull actionHref="https://www.torn.com/crimes.php" actionLabel="Commit Crime"
+                  />
+                )}
                 {data.happy && <ProgressBar label="Happy" current={data.happy.current} max={data.happy.maximum} timeRemainingSeconds={data.happy.fulltime} tick={tick} colorClass="bg-yellow-500" />}
               </CardContent>
             </Card>
@@ -350,7 +398,7 @@ export default function Dashboard() {
               <Card className="bg-card shadow-sm">
                 <CardContent className="p-3 py-2 text-[11px] space-y-1">
                   {[
-                    { label: "Drug", val: data.cooldowns?.drug },
+                    { label: "Drug", val: data.cooldowns?.drug, readyHref: "https://www.torn.com/item.php#drugs-items", readyLabel: "Use Drug" },
                     { label: "Medical", val: data.cooldowns?.medical },
                     { label: "Booster", val: data.cooldowns?.booster }
                   ].map(cd => {
@@ -359,9 +407,20 @@ export default function Dashboard() {
                     return (
                       <div key={cd.label} className="flex justify-between items-center">
                         <span className="text-muted-foreground font-bold uppercase tracking-wider">{cd.label}</span>
-                        <span className={cn("font-mono font-bold", isReady ? "text-muted-foreground opacity-50" : "text-yellow-500")}>
-                          {isReady ? "RDY" : formatTimeRemaining(remaining)}
-                        </span>
+                        {isReady && cd.readyHref ? (
+                          <a
+                            href={cd.readyHref}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-bold text-[9px] uppercase tracking-widest px-2 py-0.5 rounded border border-yellow-500/40 bg-yellow-500/10 text-yellow-400 animate-pulse hover:opacity-80 transition-opacity"
+                          >
+                            {cd.readyLabel}
+                          </a>
+                        ) : (
+                          <span className={cn("font-mono font-bold", isReady ? "text-muted-foreground opacity-50" : "text-yellow-500")}>
+                            {isReady ? "RDY" : formatTimeRemaining(remaining)}
+                          </span>
+                        )}
                       </div>
                     );
                   })}
