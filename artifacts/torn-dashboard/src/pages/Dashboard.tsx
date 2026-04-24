@@ -418,7 +418,7 @@ export default function Dashboard() {
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd("left")}>
             <SortableContext items={order.left} strategy={verticalListSortingStrategy}>
               {order.left.map((panelId) => (
-                <SortablePanel key={panelId} id={panelId} locked={locked} className={COMPACT_PANELS.has(panelId) ? "col-span-1" : "col-span-2"}>
+                <SortablePanel key={panelId} id={panelId} locked={locked} className={COMPACT_PANELS.has(panelId) ? "col-span-1 self-start" : "col-span-2"}>
 
                   {/* VITALS CARD */}
                   {panelId === "vitals" && (
