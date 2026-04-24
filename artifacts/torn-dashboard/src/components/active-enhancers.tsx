@@ -146,7 +146,15 @@ export function ActiveEnhancers() {
     if (!logs) return ENHANCERS.map(e => ({ ...e, active: false, lastUsed: 0, expiresAt: 0 }));
     const logArray = Object.values(logs);
     return ENHANCERS.map(enhancer => {
-      const itemLogs = logArray.filter(l => l.data?.item === enhancer.id);
+      const itemLogs = logArray.filter(l => {
+        const d = l.data ?? {};
+        return (
+          d.item === enhancer.id ||
+          d.item_id === enhancer.id ||
+          d.id === enhancer.id ||
+          (typeof l.title === "string" && l.title.toLowerCase().includes(enhancer.name.toLowerCase()))
+        );
+      });
       let lastUsed = 0;
       if (itemLogs.length > 0) lastUsed = Math.max(...itemLogs.map(l => l.timestamp));
       const expiresAt = lastUsed + ENHANCER_DURATION_SECONDS;

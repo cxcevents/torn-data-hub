@@ -19,10 +19,10 @@ export interface LogResponse {
 
 export function useEnhancerLog(apiKey: string | null) {
   return useQuery({
-    queryKey: ["torn", "log", "itemuse", apiKey ? apiKey.substring(0, 4) + "***" : "none"],
+    queryKey: ["torn", "log", "enhancers-v2", apiKey ? apiKey.substring(0, 4) + "***" : "none"],
     queryFn: async () => {
       if (!apiKey) throw new Error("No API key provided");
-      const url = `https://api.torn.com/user/?selections=log&cat=23&key=${apiKey}`;
+      const url = `https://api.torn.com/user/?selections=log&key=${apiKey}`;
       const response = await fetch(url);
       
       if (!response.ok) {
