@@ -6,7 +6,7 @@ export interface TornResponse {
   age?: number;
   last_action?: { relative: string; status: string; timestamp: number };
   status?: { description: string; state: string; color: string; until: number };
-  faction?: { faction_name: string; position: string; days_in_faction: number };
+  faction?: { faction_id: number; faction_name: string; faction_tag: string; position: string; days_in_faction: number };
   life?: { current: number; maximum: number };
   gender?: string;
   signup?: string;

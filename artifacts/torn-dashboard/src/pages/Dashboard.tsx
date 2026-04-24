@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useApiKey } from "@/hooks/use-api-key";
 import { useTornUser } from "@/hooks/use-torn-user";
 import { useEnhancerLog } from "@/hooks/use-enhancer-log";
+import { useFaction } from "@/hooks/use-faction";
 import { ActiveEnhancers } from "@/components/active-enhancers";
 import { ENHANCERS, ENHANCER_DURATION_SECONDS, type StatKey } from "@/lib/enhancers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +11,7 @@ import { Link } from "wouter";
 import { 
   AlertCircle, Terminal, Activity, Shield, Swords, Clock, Plane, 
   GraduationCap, Banknote, Coins, Bell, Calendar, Award,
-  BatteryCharging, Briefcase, Medal, Star, Move
+  BatteryCharging, Briefcase, Medal, Star, Move, Users, CalendarDays, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTick, formatTimeRemaining } from "@/hooks/use-tick";
@@ -233,6 +234,7 @@ export default function Dashboard() {
   const { apiKey } = useApiKey();
   const { data, isLoading, error, isFetching } = useTornUser(apiKey);
   const { data: itemUseLog } = useEnhancerLog(apiKey);
+  const { data: factionData } = useFaction(apiKey, data?.faction?.faction_id);
   const tick = useTick();
   const { locked, order, reorder } = useLayoutLock();
 
@@ -559,31 +561,113 @@ export default function Dashboard() {
               {order["left-b"].map((panelId) => (
                 <SortablePanel key={panelId} id={panelId} locked={locked}>
 
-                  {/* CHAIN & TRAVEL */}
-                  {panelId === "vitals-side" && (
-                    <div className="space-y-4">
-                      {data.chain && data.chain.current > 0 && (
-                        <Card className="bg-purple-500/5 border-purple-500/20">
-                          <CardContent className="p-3">
-                            <ProgressBar label={`Chain (x${data.chain.modifier})`} current={data.chain.current} max={data.chain.maximum} timeRemainingSeconds={data.chain.timeout} tick={tick} colorClass="bg-purple-500" />
-                          </CardContent>
-                        </Card>
-                      )}
-                      {data.travel && data.travel.time_left > 0 && (
-                        <Card className="bg-blue-500/5 border-blue-500/20">
-                          <CardContent className="p-3 flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                              <Plane className="w-4 h-4 text-blue-400" />
-                              <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400">To {data.travel.destination}</span>
-                            </div>
-                            <span className="font-mono text-sm font-bold text-blue-400">
-                              {formatTimeRemaining(Math.max(0, data.travel.time_left - tick))}
-                            </span>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
-                  )}
+                  {/* FACTION */}
+                  {panelId === "vitals-side" && (() => {
+                    const faction = data.faction;
+                    const rankedWars = factionData?.ranked_wars ? Object.values(factionData.ranked_wars) : [];
+                    const activeWar = rankedWars.find(w => w.war.end === 0);
+                    const myFactionId = faction?.faction_id ? String(faction.faction_id) : null;
+                    const myScore = activeWar && myFactionId ? activeWar.factions[myFactionId]?.score : null;
+                    const opponentEntry = activeWar && myFactionId
+                      ? Object.entries(activeWar.factions).find(([id]) => id !== myFactionId)
+                      : null;
+                    const opponentScore = opponentEntry?.[1]?.score;
+                    const opponentName = opponentEntry?.[1]?.name;
+                    const memberCount = factionData?.members ? Object.keys(factionData.members).length : null;
+
+                    return (
+                      <Card className="bg-card shadow-sm">
+                        <CardHeader className="p-3 pb-0">
+                          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                            <Shield className="w-3.5 h-3.5 text-primary" />
+                            Faction
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-3 pt-2 space-y-3">
+                          {faction?.faction_name ? (
+                            <>
+                              <div>
+                                <a
+                                  href="https://www.torn.com/factions.php?step=your&type=1#/"
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="group flex items-center gap-1.5 w-fit"
+                                >
+                                  <span className="text-base font-black text-foreground group-hover:text-primary transition-colors leading-tight">
+                                    {faction.faction_name}
+                                  </span>
+                                  <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+                                </a>
+                                {faction.faction_tag && (
+                                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">[{faction.faction_tag}]</span>
+                                )}
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                <div className="bg-muted/30 rounded-md p-2 border border-border/40">
+                                  <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Position</div>
+                                  <div className="font-bold text-foreground truncate">{faction.position}</div>
+                                </div>
+                                <div className="bg-muted/30 rounded-md p-2 border border-border/40">
+                                  <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Days In</div>
+                                  <div className="font-mono font-bold text-foreground">{faction.days_in_faction.toLocaleString()}</div>
+                                </div>
+                                {memberCount !== null && (
+                                  <div className="bg-muted/30 rounded-md p-2 border border-border/40">
+                                    <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Members</div>
+                                    <div className="font-mono font-bold text-foreground">{memberCount}</div>
+                                  </div>
+                                )}
+                                {factionData?.respect !== undefined && (
+                                  <div className="bg-muted/30 rounded-md p-2 border border-border/40">
+                                    <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Respect</div>
+                                    <div className="font-mono font-bold text-foreground">{formatLargeNumber(factionData.respect)}</div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {activeWar && (
+                                <div className="rounded-md border border-red-500/30 bg-red-500/5 p-2.5 space-y-1.5">
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <Swords className="w-3 h-3 text-red-400" />
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-red-400">Ranked War</span>
+                                  </div>
+                                  <div className="flex justify-between items-center text-[11px]">
+                                    <span className="font-bold text-foreground truncate max-w-[55%]">{faction.faction_name}</span>
+                                    <span className="font-mono font-bold text-green-400">{myScore ?? "—"}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center text-[11px]">
+                                    <span className="text-muted-foreground truncate max-w-[55%]">{opponentName ?? "Opponent"}</span>
+                                    <span className="font-mono font-bold text-red-400">{opponentScore ?? "—"}</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {data.chain && data.chain.current > 0 && (
+                                <div className="rounded-md border border-purple-500/20 bg-purple-500/5 p-2">
+                                  <ProgressBar label={`Chain (x${data.chain.modifier})`} current={data.chain.current} max={data.chain.maximum} timeRemainingSeconds={data.chain.timeout} tick={tick} colorClass="bg-purple-500" />
+                                </div>
+                              )}
+
+                              {data.travel && data.travel.time_left > 0 && (
+                                <div className="flex justify-between items-center rounded-md border border-blue-500/20 bg-blue-500/5 p-2">
+                                  <div className="flex items-center gap-2">
+                                    <Plane className="w-3.5 h-3.5 text-blue-400" />
+                                    <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400">To {data.travel.destination}</span>
+                                  </div>
+                                  <span className="font-mono text-sm font-bold text-blue-400">
+                                    {formatTimeRemaining(Math.max(0, data.travel.time_left - tick))}
+                                  </span>
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="text-[11px] text-muted-foreground">No faction</div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })()}
 
                   {/* BATTLE STATS & WORK STATS */}
                   {panelId === "stats" && (
