@@ -6,7 +6,7 @@ const ORDER_KEY = "torn_layout_order";
 export type ColumnId = "left" | "right";
 
 const DEFAULT_ORDER: Record<ColumnId, string[]> = {
-  left: ["vitals", "vitals-side", "stats-assets", "events-messages"],
+  left: ["vitals", "vitals-side", "cooldowns", "stats-assets", "events-messages"],
   right: ["alerts", "refills", "achievements", "selected-stats"],
 };
 
