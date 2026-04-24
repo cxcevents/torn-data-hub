@@ -1,5 +1,6 @@
 import { useApiKey } from "@/hooks/use-api-key";
 import { useTornUser } from "@/hooks/use-torn-user";
+import { ActiveEnhancers } from "@/components/active-enhancers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Onboarding } from "@/components/onboarding";
 import { Link } from "wouter";
@@ -182,6 +183,9 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* 2. ACTIVE ENHANCERS */}
+      <ActiveEnhancers />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         
