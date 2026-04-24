@@ -332,20 +332,10 @@ export default function Dashboard() {
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
                 LVL {data.level}
               </span>
-            </div>
-            <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1">
-              <div className="flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5" />
-                {data.faction?.faction_name ? (
-                  <span>{data.faction.position} of <strong className="text-foreground">{data.faction.faction_name}</strong> <span className="opacity-50">({data.faction.days_in_faction}d)</span></span>
-                ) : (
-                  <span>No Faction</span>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5" />
-                <span>Age: {data.age}d</span>
-              </div>
+              <span className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
+                <Calendar className="w-3 h-3" />
+                {data.age}d
+              </span>
             </div>
           </div>
 
