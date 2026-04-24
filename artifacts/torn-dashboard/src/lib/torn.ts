@@ -10,6 +10,7 @@ export interface TornResponse {
   life?: { current: number; maximum: number };
   gender?: string;
   signup?: string;
+  profile_image?: string;
   awards?: number;
   energy?: Bar;
   nerve?: Bar;

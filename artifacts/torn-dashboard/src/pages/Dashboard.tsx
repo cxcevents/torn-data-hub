@@ -339,6 +339,27 @@ export default function Dashboard() {
       <div className="bg-card border border-border rounded-lg overflow-hidden relative shadow-sm">
         <div className="absolute top-0 left-0 w-1 h-full bg-primary" />
         <div className="p-4 flex flex-col md:flex-row justify-between gap-4">
+          <div className="flex items-start gap-3">
+            {/* Avatar */}
+            <div className="flex-shrink-0 w-14 h-14 rounded-full border-2 border-primary/40 overflow-hidden bg-primary/10 flex items-center justify-center shadow-sm">
+              {data.profile_image ? (
+                <img
+                  src={data.profile_image}
+                  alt={data.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                    (e.currentTarget.nextElementSibling as HTMLElement)?.style?.removeProperty("display");
+                  }}
+                />
+              ) : null}
+              <span
+                className="text-xl font-black text-primary"
+                style={{ display: data.profile_image ? "none" : undefined }}
+              >
+                {data.name?.[0]?.toUpperCase()}
+              </span>
+            </div>
           <div className="space-y-2">
             <div className="flex items-center gap-3">
               <h2 className="text-2xl font-black tracking-tight text-foreground">{data.name}</h2>
@@ -355,6 +376,7 @@ export default function Dashboard() {
                 <span className="inline-block min-w-[5.5rem] text-left">{formatAge(data.age, ageExpanded)}</span>
               </button>
             </div>
+          </div>
           </div>
 
           <div className="hidden md:flex items-center gap-2">
