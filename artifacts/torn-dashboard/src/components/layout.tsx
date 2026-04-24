@@ -1,11 +1,12 @@
 import { Link, useLocation } from "wouter";
 import { useApiKey } from "@/hooks/use-api-key";
-import { Settings, Code, Moon, Sun, RefreshCw } from "lucide-react";
+import { Settings, Code, Moon, Sun, RefreshCw, Lock, LockOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useTornUser } from "@/hooks/use-torn-user";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useLayoutLock } from "@/hooks/use-layout-lock";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -51,6 +52,7 @@ export function Layout({ children }: LayoutProps) {
   const { data, refetch, isFetching } = useTornUser(apiKey);
   const [nextRefresh, setNextRefresh] = useState(30);
   const [location, navigate] = useLocation();
+  const { locked, toggleLock } = useLayoutLock();
 
   useEffect(() => {
     if (!apiKey) return;
@@ -112,6 +114,18 @@ export function Layout({ children }: LayoutProps) {
             <nav className="flex items-center gap-1">
               <NavIcon href="/raw" icon={<Code className="h-4 w-4" />} currentPath={location} navigate={navigate} />
               <NavIcon href="/settings" icon={<Settings className="h-4 w-4" />} currentPath={location} navigate={navigate} />
+              <button
+                onClick={toggleLock}
+                title={locked ? "Unlock layout to rearrange cards" : "Lock layout"}
+                className={cn(
+                  "h-9 w-9 flex items-center justify-center rounded-md transition-colors",
+                  !locked
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                )}
+              >
+                {locked ? <Lock className="h-4 w-4" /> : <LockOpen className="h-4 w-4" />}
+              </button>
               <Button
                 variant="ghost"
                 size="icon"

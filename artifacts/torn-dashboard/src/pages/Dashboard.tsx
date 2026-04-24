@@ -10,11 +10,19 @@ import { Link } from "wouter";
 import { 
   AlertCircle, Terminal, Activity, Shield, Swords, Clock, Plane, 
   GraduationCap, Banknote, Coins, Bell, Mail, Calendar, Target, Award,
-  BatteryCharging, Briefcase, Medal, Star
+  BatteryCharging, Briefcase, Medal, Star, Move
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTick, formatTimeRemaining } from "@/hooks/use-tick";
 import { formatNumber, formatLargeNumber, stripHtml, cn } from "@/lib/utils";
+import { useLayoutLock, type ColumnId } from "@/hooks/use-layout-lock";
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 function EffectiveStatBox({ label, base, modifierPct, activeBonusPct }: { label: string, base: number, modifierPct: number, activeBonusPct: number }) {
   const totalPct = (modifierPct || 0) + (activeBonusPct || 0);
@@ -180,6 +188,26 @@ function ProgressBar({
   );
 }
 
+function SortablePanel({ id, locked, children }: { id: string; locked: boolean; children: React.ReactNode }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: locked });
+  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 10 : undefined };
+  return (
+    <div ref={setNodeRef} style={style} className={cn("relative group", isDragging && "opacity-60")}>
+      {!locked && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute top-2 right-2 z-20 p-1.5 rounded bg-muted/80 border border-border/60 text-muted-foreground opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing transition-opacity"
+          title="Drag to reorder"
+        >
+          <Move className="w-3 h-3" />
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
 function CompactList({ title, items, icon: Icon }: { title: string, items: {label: string, value: any}[], icon: any }) {
   return (
     <div className="bg-muted/20 border border-border/50 rounded-md p-3">
@@ -205,6 +233,19 @@ export default function Dashboard() {
   const { data, isLoading, error, isFetching } = useTornUser(apiKey);
   const { data: itemUseLog } = useEnhancerLog(apiKey);
   const tick = useTick();
+  const { locked, order, reorder } = useLayoutLock();
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  const handleDragEnd = (column: ColumnId) => (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const items = order[column];
+      const oldIndex = items.indexOf(active.id as string);
+      const newIndex = items.indexOf(over.id as string);
+      reorder(column, arrayMove(items, oldIndex, newIndex));
+    }
+  };
 
   void tick;
   const activeEnhancerBonus: Record<StatKey, number> = { strength: 0, defense: 0, speed: 0, dexterity: 0 };
@@ -328,12 +369,16 @@ export default function Dashboard() {
       <ActiveEnhancers />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        
+
         {/* LEFT COLUMN (WIDER) */}
         <div className="space-y-4 lg:col-span-8">
-          
-          {/* BARS & VITALS */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd("left")}>
+            <SortableContext items={order.left} strategy={verticalListSortingStrategy}>
+              {order.left.map((panelId) => (
+                <SortablePanel key={panelId} id={panelId} locked={locked}>
+
+                  {/* BARS & VITALS */}
+                  {panelId === "vitals" && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="bg-card shadow-sm">
               <CardHeader className="p-3 pb-0">
                 <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
@@ -436,9 +481,10 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </div>
-          </div>
+          </div>}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* STATS & ASSETS */}
+                  {panelId === "stats-assets" && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* BATTLESTATS & WORKSTATS */}
             <Card className="bg-card shadow-sm">
               <CardHeader className="p-3 pb-0">
@@ -556,10 +602,10 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </div>}
 
-          {/* EVENTS & MESSAGES */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* EVENTS & MESSAGES */}
+                  {panelId === "events-messages" && <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Card className="bg-card shadow-sm">
               <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between">
                 <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
@@ -606,15 +652,23 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </div>}
 
+                </SortablePanel>
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
 
         {/* RIGHT COLUMN (NARROWER) */}
         <div className="space-y-4 lg:col-span-4">
-          
-          {/* NOTIFICATIONS */}
-          <Card className="bg-card shadow-sm border-primary/20">
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd("right")}>
+            <SortableContext items={order.right} strategy={verticalListSortingStrategy}>
+              {order.right.map((panelId) => (
+                <SortablePanel key={panelId} id={panelId} locked={locked}>
+
+                  {/* NOTIFICATIONS */}
+                  {panelId === "alerts" && <Card className="bg-card shadow-sm border-primary/20">
             <CardHeader className="p-3 pb-2">
               <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                 <Bell className="w-3.5 h-3.5 text-primary" />
@@ -641,10 +695,10 @@ export default function Dashboard() {
                 </a>
               </div>
             </CardContent>
-          </Card>
+          </Card>}
 
-          {/* REFILLS & USAGE */}
-          <Card className="bg-card shadow-sm">
+                  {/* REFILLS & USAGE */}
+                  {panelId === "refills" && <Card className="bg-card shadow-sm">
             <CardHeader className="p-3 pb-2">
               <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                 <BatteryCharging className="w-3.5 h-3.5 text-primary" />
@@ -697,10 +751,10 @@ export default function Dashboard() {
                 </a>
               </div>
             </CardContent>
-          </Card>
+          </Card>}
 
-          {/* PERKS, MERITS, MEDALS SUMMARY */}
-          <Card className="bg-card shadow-sm">
+                  {/* PERKS, MERITS, MEDALS SUMMARY */}
+                  {panelId === "achievements" && <Card className="bg-card shadow-sm">
             <CardHeader className="p-3 pb-2">
               <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                 <Award className="w-3.5 h-3.5 text-primary" />
@@ -727,10 +781,10 @@ export default function Dashboard() {
               <MeritUpgrades merits={data.merits} />
 
             </CardContent>
-          </Card>
+          </Card>}
 
-          {/* PERSONAL STATS MINI */}
-          <Card className="bg-card shadow-sm">
+                  {/* PERSONAL STATS MINI */}
+                  {panelId === "selected-stats" && <Card className="bg-card shadow-sm">
             <CardHeader className="p-3 pb-2">
               <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                 <Activity className="w-3.5 h-3.5 text-primary" />
@@ -757,8 +811,12 @@ export default function Dashboard() {
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </Card>}
 
+                </SortablePanel>
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
     </div>
