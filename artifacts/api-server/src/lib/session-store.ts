@@ -1,3 +1,7 @@
+import { db, visitorHistoryTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { logger } from "./logger";
+
 export interface Session {
   sessionId: string;
   firstSeen: number;
@@ -19,6 +23,49 @@ export interface HistoryEntry {
 const sessions = new Map<string, Session>();
 const history = new Map<number, HistoryEntry>(); // keyed by playerId
 const TTL_MS = 90_000;
+
+/** Load persisted history from DB into memory on server start. */
+export async function initSessionStore() {
+  try {
+    const rows = await db.select().from(visitorHistoryTable);
+    for (const row of rows) {
+      history.set(row.playerId, {
+        name: row.name,
+        playerId: row.playerId,
+        level: row.level ?? undefined,
+        firstSeen: row.firstSeen.getTime(),
+        lastSeen: row.lastSeen.getTime(),
+        visitCount: row.visitCount,
+      });
+    }
+    logger.info({ count: rows.length }, "Loaded visitor history from DB");
+  } catch (err) {
+    logger.error({ err }, "Failed to load visitor history from DB");
+  }
+}
+
+/** Persist a history entry to DB (fire-and-forget). */
+function persistHistoryEntry(entry: HistoryEntry) {
+  db.insert(visitorHistoryTable)
+    .values({
+      playerId: entry.playerId,
+      name: entry.name,
+      level: entry.level ?? null,
+      firstSeen: new Date(entry.firstSeen),
+      lastSeen: new Date(entry.lastSeen),
+      visitCount: entry.visitCount,
+    })
+    .onConflictDoUpdate({
+      target: visitorHistoryTable.playerId,
+      set: {
+        name: entry.name,
+        level: entry.level ?? null,
+        lastSeen: new Date(entry.lastSeen),
+        visitCount: entry.visitCount,
+      },
+    })
+    .catch((err: unknown) => logger.error({ err }, "Failed to persist visitor history"));
+}
 
 export function cleanup() {
   const cutoff = Date.now() - TTL_MS;
@@ -46,17 +93,19 @@ export function upsertSession(
     level,
   });
 
-  // Keep a permanent history record for identified users
+  // Persist identified users to DB
   if (name && playerId) {
     const prev = history.get(playerId);
-    history.set(playerId, {
+    const updated: HistoryEntry = {
       name,
       playerId,
       level: level ?? prev?.level,
       firstSeen: prev?.firstSeen ?? now,
       lastSeen: now,
-      visitCount: (prev?.visitCount ?? 0) + (existing ? 0 : 1), // increment only on new session
-    });
+      visitCount: (prev?.visitCount ?? 0) + (existing ? 0 : 1),
+    };
+    history.set(playerId, updated);
+    persistHistoryEntry(updated);
   }
 }
 
