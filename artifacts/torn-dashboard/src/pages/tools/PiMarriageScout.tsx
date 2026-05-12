@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   Users, ExternalLink, ChevronUp, ChevronDown,
   AlertCircle, Search, X, Info, Loader2, CheckCircle2, XCircle,
+  Download, Clipboard, ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -47,6 +48,44 @@ function sortResults(results: ScoutResult[], key: SortKey, dir: SortDir) {
   });
 }
 
+const CSV_HEADERS = ["Player", "Player ID", "Level", "Days in Faction", "Faction", "Faction ID", "Torn Profile URL"];
+
+function toRow(r: ScoutResult): (string | number)[] {
+  return [
+    r.name,
+    r.id,
+    r.level,
+    r.daysInFaction,
+    r.factionName,
+    r.factionId,
+    `https://www.torn.com/profiles.php?XID=${r.id}`,
+  ];
+}
+
+function escapeCSV(val: string | number): string {
+  const s = String(val);
+  return s.includes(",") || s.includes('"') || s.includes("\n")
+    ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function downloadCSV(results: ScoutResult[]) {
+  const rows = [CSV_HEADERS, ...results.map(toRow)];
+  const csv = rows.map(row => row.map(escapeCSV).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `pi-scout-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function copyForSheets(results: ScoutResult[]): Promise<void> {
+  const rows = [CSV_HEADERS, ...results.map(toRow)];
+  const tsv = rows.map(row => row.join("\t")).join("\n");
+  await navigator.clipboard.writeText(tsv);
+}
+
 export default function PiMarriageScout() {
   const { apiKey } = useApiKey();
   const uidRef = useRef(1);
@@ -54,6 +93,7 @@ export default function PiMarriageScout() {
   const [fields, setFields] = useState<Field[]>([{ uid: 0, value: "", status: "idle" }]);
   const [sortKey, setSortKey] = useState<SortKey>("level");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [copied, setCopied] = useState(false);
   const { state, scan, cancel } = usePiScout(apiKey);
 
   const { phase, total, checked, results, error } = state;
@@ -383,7 +423,7 @@ export default function PiMarriageScout() {
       {(results.length > 0 || phase === "done") && (
         <Card className="bg-card">
           <CardHeader className="p-4 pb-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                 Results
                 {results.length > 0 && (
@@ -393,7 +433,32 @@ export default function PiMarriageScout() {
                 )}
               </CardTitle>
               {results.length > 0 && (
-                <span className="text-[10px] text-muted-foreground/60">Unmarried + Private Island</span>
+                <div className="flex items-center gap-2">
+                  {/* Copy for Sheets */}
+                  <button
+                    onClick={async () => {
+                      await copyForSheets(sortedResults);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    title="Copy as tab-separated — paste directly into Google Sheets or Excel"
+                    className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded border border-border/50 text-muted-foreground hover:text-foreground hover:border-border hover:bg-muted/40 transition-colors"
+                  >
+                    {copied
+                      ? <><ClipboardCheck className="w-3 h-3 text-green-500" /><span className="text-green-500">Copied</span></>
+                      : <><Clipboard className="w-3 h-3" />Copy for Sheets</>
+                    }
+                  </button>
+                  {/* Download CSV */}
+                  <button
+                    onClick={() => downloadCSV(sortedResults)}
+                    title="Download as CSV — open directly in Google Sheets, Excel, or Numbers"
+                    className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded border border-border/50 text-muted-foreground hover:text-foreground hover:border-border hover:bg-muted/40 transition-colors"
+                  >
+                    <Download className="w-3 h-3" />
+                    Download CSV
+                  </button>
+                </div>
               )}
             </div>
           </CardHeader>
