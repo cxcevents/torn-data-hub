@@ -16,6 +16,11 @@ interface BaldrEntry {
   name?: string;
   id: string | number;
   lvl?: string;
+  total?: string;
+  str?: string;
+  def?: string;
+  spd?: string;
+  dex?: string;
 }
 
 type BaldrData = Record<string, (number | BaldrEntry)[]>;
@@ -33,6 +38,16 @@ export interface LevelingTarget {
   id: number;
   name: string;
   level: number;
+  // Life (from Torn API)
+  lifeCurrent: number;
+  lifeMax: number;
+  // Battle stats (from data.json spy data)
+  targetTotal: number;
+  targetStr: number;
+  targetDef: number;
+  targetSpd: number;
+  targetDex: number;
+  // Live status (from Torn API)
   statusState: TargetStatus;
   statusUntil: number;
   statusDescription: string;
@@ -62,16 +77,31 @@ function sleep(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
 }
 
+function parseStatStr(s: string | undefined): number {
+  if (!s) return 0;
+  return parseInt(s.replace(/,/g, ""), 10) || 0;
+}
+
 function extractId(entry: number | BaldrEntry): number {
   if (typeof entry === "number") return entry;
   return parseInt(String(entry.id), 10);
 }
 
-function makeLoadingTarget(id: number): LevelingTarget {
+function makeLoadingTarget(entry: number | BaldrEntry): LevelingTarget {
+  const id = extractId(entry);
+  const isObj = typeof entry === "object" && entry !== null;
+  const e = isObj ? (entry as BaldrEntry) : null;
   return {
     id,
     name: String(id),
-    level: 0,
+    level: e?.lvl ? parseInt(e.lvl, 10) || 0 : 0,
+    lifeCurrent: 0,
+    lifeMax: 0,
+    targetTotal: parseStatStr(e?.total),
+    targetStr: parseStatStr(e?.str),
+    targetDef: parseStatStr(e?.def),
+    targetSpd: parseStatStr(e?.spd),
+    targetDex: parseStatStr(e?.dex),
     statusState: "loading",
     statusUntil: 0,
     statusDescription: "",
@@ -102,7 +132,6 @@ export function useLevelingTargets(apiKey: string | null) {
       setState({ phase: "loading", total: 0, checked: 0, targets: [], error: null });
 
       try {
-        // Load data.json — fall back to hardcoded List 1 IDs
         let data = dataRef.current;
         if (!data) {
           try {
@@ -135,13 +164,17 @@ export function useLevelingTargets(apiKey: string | null) {
           return;
         }
 
-        const ids = rawEntries.map(extractId).filter((n) => n > 0 && isFinite(n));
-        if (ids.length === 0) {
+        const validEntries = rawEntries.filter((e) => {
+          const id = extractId(e);
+          return id > 0 && isFinite(id);
+        });
+
+        if (validEntries.length === 0) {
           setState((s) => ({ ...s, phase: "error", error: "No valid player IDs found." }));
           return;
         }
 
-        const targets: LevelingTarget[] = ids.map(makeLoadingTarget);
+        const targets: LevelingTarget[] = validEntries.map(makeLoadingTarget);
         setState({
           phase: "fetching",
           total: targets.length,
@@ -166,7 +199,9 @@ export function useLevelingTargets(apiKey: string | null) {
               targets[i] = {
                 ...targets[i],
                 name: profile.name ?? String(targets[i].id),
-                level: profile.level ?? 0,
+                level: profile.level ?? targets[i].level,
+                lifeCurrent: profile.life?.current ?? 0,
+                lifeMax: profile.life?.maximum ?? 0,
                 statusState: (profile.status?.state as TargetStatus) ?? "Okay",
                 statusUntil: profile.status?.until ?? 0,
                 statusDescription: profile.status?.description ?? "",

@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useApiKey } from "@/hooks/use-api-key";
+import { useTornUser } from "@/hooks/use-torn-user";
+import { useEnhancerActivations } from "@/hooks/use-enhancer-activations";
 import { useLevelingTargets, LIST_NAMES } from "@/hooks/use-leveling-targets";
 import type { LevelingTarget, TargetStatus } from "@/hooks/use-leveling-targets";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,12 +9,16 @@ import { Button } from "@/components/ui/button";
 import {
   TrendingUp, AlertCircle, Search, X, Loader2,
   Swords, ExternalLink, ChevronUp, ChevronDown,
-  Clock, RefreshCw,
+  Clock, RefreshCw, Lock, ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STORAGE_KEY = "leveling_targets_list";
+
+// Ratio thresholds: userEffTotal / targetTotal
+const RATIO_LOCK = 5;   // >= 5× → block attack
+const RATIO_WARN = 2.5; // >= 2.5× → yellow caution
 
 const LAST_ACTION_PRIORITY: Record<string, number> = {
   Online: 0,
@@ -30,7 +36,7 @@ const STATUS_PRIORITY: Record<TargetStatus, number> = {
   loading: 6,
 };
 
-type SortKey = "name" | "level" | "status";
+type SortKey = "name" | "level" | "status" | "life" | "stats";
 type SortDir = "asc" | "desc";
 
 function autoSort(targets: LevelingTarget[]): LevelingTarget[] {
@@ -38,19 +44,14 @@ function autoSort(targets: LevelingTarget[]): LevelingTarget[] {
     const ap = STATUS_PRIORITY[a.statusState] ?? 6;
     const bp = STATUS_PRIORITY[b.statusState] ?? 6;
     if (ap !== bp) return ap - bp;
-
-    // Within attackable: Online > Idle > Offline
     if (a.statusState === "Okay" && b.statusState === "Okay") {
       const ala = LAST_ACTION_PRIORITY[a.lastActionStatus] ?? 3;
       const bla = LAST_ACTION_PRIORITY[b.lastActionStatus] ?? 3;
       return ala - bla;
     }
-
-    // Within hospital: soonest release first
     if (a.statusState === "Hospital" && b.statusState === "Hospital") {
       return a.statusUntil - b.statusUntil;
     }
-
     return 0;
   });
 }
@@ -60,18 +61,20 @@ function manualSort(targets: LevelingTarget[], key: SortKey, dir: SortDir): Leve
     let cmp = 0;
     if (key === "name") cmp = a.name.localeCompare(b.name);
     else if (key === "level") cmp = a.level - b.level;
+    else if (key === "life") {
+      const ap = a.lifeMax > 0 ? a.lifeCurrent / a.lifeMax : 0;
+      const bp = b.lifeMax > 0 ? b.lifeCurrent / b.lifeMax : 0;
+      cmp = ap - bp;
+    }
+    else if (key === "stats") cmp = a.targetTotal - b.targetTotal;
     else {
       const ap = STATUS_PRIORITY[a.statusState] ?? 6;
       const bp = STATUS_PRIORITY[b.statusState] ?? 6;
       cmp = ap - bp;
       if (cmp === 0 && a.statusState === "Okay") {
-        const ala = LAST_ACTION_PRIORITY[a.lastActionStatus] ?? 3;
-        const bla = LAST_ACTION_PRIORITY[b.lastActionStatus] ?? 3;
-        cmp = ala - bla;
+        cmp = (LAST_ACTION_PRIORITY[a.lastActionStatus] ?? 3) - (LAST_ACTION_PRIORITY[b.lastActionStatus] ?? 3);
       }
-      if (cmp === 0 && a.statusState === "Hospital") {
-        cmp = a.statusUntil - b.statusUntil;
-      }
+      if (cmp === 0 && a.statusState === "Hospital") cmp = a.statusUntil - b.statusUntil;
     }
     return dir === "asc" ? cmp : -cmp;
   });
@@ -94,6 +97,14 @@ function formatCountdown(untilSeconds: number, nowMs: number): string {
   return `${m}m`;
 }
 
+function fmtStat(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+// ── Sub-components ──────────────────────────────────────────────────────────
+
 function StatusCell({ target, nowMs }: { target: LevelingTarget; nowMs: number }) {
   if (target.statusState === "loading") {
     return (
@@ -103,9 +114,7 @@ function StatusCell({ target, nowMs }: { target: LevelingTarget; nowMs: number }
       </span>
     );
   }
-  if (target.statusState === "error") {
-    return <span className="text-xs text-muted-foreground/30">—</span>;
-  }
+  if (target.statusState === "error") return <span className="text-xs text-muted-foreground/30">—</span>;
   if (target.statusState === "Okay") {
     return (
       <span className="inline-flex items-center gap-1 text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/20 px-2 py-0.5 rounded-full">
@@ -114,9 +123,7 @@ function StatusCell({ target, nowMs }: { target: LevelingTarget; nowMs: number }
     );
   }
   if (target.statusState === "Hospital") {
-    const label = target.statusUntil
-      ? formatCountdown(target.statusUntil, nowMs)
-      : "Hospital";
+    const label = target.statusUntil ? formatCountdown(target.statusUntil, nowMs) : "Hospital";
     return (
       <span className="inline-flex items-center gap-1 text-xs font-medium text-red-400 bg-red-400/10 border border-red-400/20 px-2 py-0.5 rounded-full">
         <Clock className="w-3 h-3 flex-shrink-0" />
@@ -124,23 +131,15 @@ function StatusCell({ target, nowMs }: { target: LevelingTarget; nowMs: number }
       </span>
     );
   }
-  return (
-    <span className="text-xs text-muted-foreground/50 capitalize">
-      {target.statusState}
-    </span>
-  );
+  return <span className="text-xs text-muted-foreground/50 capitalize">{target.statusState}</span>;
 }
 
 function LastActionCell({ target }: { target: LevelingTarget }) {
-  if (!target.lastActionRelative) {
-    return <span className="text-xs text-muted-foreground/25">—</span>;
-  }
+  if (!target.lastActionRelative) return <span className="text-xs text-muted-foreground/25">—</span>;
   const dotCls =
-    target.lastActionStatus === "Online"
-      ? "bg-green-400"
-      : target.lastActionStatus === "Idle"
-      ? "bg-amber-400"
-      : "bg-muted-foreground/25";
+    target.lastActionStatus === "Online" ? "bg-green-400"
+    : target.lastActionStatus === "Idle" ? "bg-amber-400"
+    : "bg-muted-foreground/25";
   return (
     <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
       <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", dotCls)} />
@@ -149,8 +148,143 @@ function LastActionCell({ target }: { target: LevelingTarget }) {
   );
 }
 
+function LifeCell({ target }: { target: LevelingTarget }) {
+  if (target.statusState === "loading") {
+    return <span className="text-xs text-muted-foreground/25">—</span>;
+  }
+  if (!target.lifeMax) {
+    return <span className="text-xs text-muted-foreground/25">—</span>;
+  }
+  const pct = Math.min(100, Math.round((target.lifeCurrent / target.lifeMax) * 100));
+  const barColor = pct > 60 ? "bg-blue-500" : pct > 30 ? "bg-amber-500" : "bg-red-500";
+  return (
+    <div className="space-y-1 min-w-[80px]">
+      <div className="w-full h-1.5 rounded-full bg-muted/50 overflow-hidden">
+        <div
+          className={cn("h-full rounded-full transition-all duration-500", barColor)}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-[10px] text-muted-foreground/50 font-mono tabular-nums block">
+        {target.lifeCurrent.toLocaleString()} / {target.lifeMax.toLocaleString()}
+      </span>
+    </div>
+  );
+}
+
+function StatsCell({
+  target,
+  userEffTotal,
+}: {
+  target: LevelingTarget;
+  userEffTotal: number;
+}) {
+  if (target.statusState === "loading") {
+    return <span className="text-xs text-muted-foreground/25">—</span>;
+  }
+  if (!target.targetTotal) {
+    return <span className="text-xs text-muted-foreground/30">No spy data</span>;
+  }
+
+  const ratio = userEffTotal > 0 ? userEffTotal / target.targetTotal : null;
+
+  let ratioLabel = "";
+  let ratioCls = "";
+  if (ratio !== null) {
+    if (ratio >= RATIO_LOCK) {
+      ratioLabel = `${ratio.toFixed(1)}× yours`;
+      ratioCls = "text-red-400";
+    } else if (ratio >= RATIO_WARN) {
+      ratioLabel = `${ratio.toFixed(1)}× yours`;
+      ratioCls = "text-amber-400";
+    } else if (ratio >= 1) {
+      ratioLabel = `${ratio.toFixed(1)}× yours`;
+      ratioCls = "text-yellow-300/70";
+    } else {
+      ratioLabel = `${(1 / ratio).toFixed(1)}× stronger`;
+      ratioCls = "text-green-400";
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-baseline gap-1.5">
+        <span className="font-mono font-bold text-sm text-foreground/75 tabular-nums">
+          {fmtStat(target.targetTotal)}
+        </span>
+        <span className="text-[10px] text-muted-foreground/40">total</span>
+      </div>
+      {target.targetStr > 0 && (
+        <div className="text-[10px] font-mono text-muted-foreground/35 mt-0.5 flex gap-1.5 tabular-nums">
+          <span title="Strength">S:{fmtStat(target.targetStr)}</span>
+          <span title="Defense">D:{fmtStat(target.targetDef)}</span>
+          <span title="Speed">Sp:{fmtStat(target.targetSpd)}</span>
+          <span title="Dexterity">Dx:{fmtStat(target.targetDex)}</span>
+        </div>
+      )}
+      {ratio !== null && (
+        <span className={cn("text-[10px] font-bold block mt-0.5", ratioCls)}>
+          {ratioLabel}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function AttackCell({
+  target,
+  userEffTotal,
+}: {
+  target: LevelingTarget;
+  userEffTotal: number;
+}) {
+  if (target.statusState === "Hospital" || target.statusState === "loading" || target.statusState === "error") {
+    return null;
+  }
+
+  const ratio = userEffTotal > 0 && target.targetTotal > 0
+    ? userEffTotal / target.targetTotal
+    : null;
+  const tooStrong = ratio !== null && ratio >= RATIO_LOCK;
+
+  if (tooStrong) {
+    return (
+      <div className="flex flex-col items-end gap-1">
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded border border-muted/40 text-muted-foreground/40">
+          <Lock className="w-3 h-3" />
+          <span className="text-[10px] font-bold uppercase tracking-wider">Too Strong</span>
+        </div>
+        <span className="text-[10px] text-muted-foreground/35 text-right leading-tight max-w-[110px]">
+          You're {ratio.toFixed(0)}× stronger — little XP gain
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <a
+      href={`https://www.torn.com/loader.php?sid=attack&user2ID=${target.id}`}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-7 px-3 text-xs gap-1.5 bg-primary/15 hover:bg-primary/25 text-primary border border-primary/25 hover:border-primary/45"
+      >
+        <Swords className="w-3 h-3" />
+        Attack
+      </Button>
+    </a>
+  );
+}
+
+// ── Main component ───────────────────────────────────────────────────────────
+
 export default function LevelingTargets() {
   const { apiKey } = useApiKey();
+  const { data: userData } = useTornUser(apiKey);
+  const { computeBonus } = useEnhancerActivations();
   const { state, fetchList, cancel, reset } = useLevelingTargets(apiKey);
   const { phase, total, checked, targets, error } = state;
 
@@ -165,10 +299,21 @@ export default function LevelingTargets() {
   const isRunning = phase === "loading" || phase === "fetching";
   const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
 
+  // Refresh countdowns every 30s
   useEffect(() => {
     const id = setInterval(() => setNowMs(Date.now()), 30_000);
     return () => clearInterval(id);
   }, []);
+
+  // User effective stats (base × modifier × active enhancers)
+  const nowUnix = Math.floor(nowMs / 1000);
+  const enhBonus = computeBonus(nowUnix);
+  const userHasStats = !!(userData?.strength || userData?.defense || userData?.speed || userData?.dexterity);
+  const userEffStr = Math.round((userData?.strength ?? 0) * (1 + ((userData?.strength_modifier ?? 0) + enhBonus.strength) / 100));
+  const userEffDef = Math.round((userData?.defense ?? 0) * (1 + ((userData?.defense_modifier ?? 0) + enhBonus.defense) / 100));
+  const userEffSpd = Math.round((userData?.speed ?? 0) * (1 + ((userData?.speed_modifier ?? 0) + enhBonus.speed) / 100));
+  const userEffDex = Math.round((userData?.dexterity ?? 0) * (1 + ((userData?.dexterity_modifier ?? 0) + enhBonus.dexterity) / 100));
+  const userEffTotal = userEffStr + userEffDef + userEffSpd + userEffDex;
 
   const handleSelectList = useCallback(
     (name: string) => {
@@ -206,9 +351,13 @@ export default function LevelingTargets() {
   const attackableCount = targets.filter((t) => t.statusState === "Okay").length;
   const hospitalCount = targets.filter((t) => t.statusState === "Hospital").length;
   const loadingCount = targets.filter((t) => t.statusState === "loading").length;
+  const lockedCount = targets.filter((t) => {
+    if (!userEffTotal || !t.targetTotal) return false;
+    return userEffTotal / t.targetTotal >= RATIO_LOCK;
+  }).length;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div>
         <div className="flex items-center gap-3 mb-1">
@@ -233,6 +382,25 @@ export default function LevelingTargets() {
           . Live status fetched via your API key — attackable targets surface to the top.
         </p>
       </div>
+
+      {/* Your stats strip */}
+      {userHasStats && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 rounded-md bg-muted/20 border border-border/30 text-xs">
+          <span className="text-muted-foreground/60 font-bold uppercase tracking-wider">Your effective stats</span>
+          <span className="font-mono font-bold text-foreground/70 tabular-nums">
+            {fmtStat(userEffTotal)} total
+          </span>
+          <span className="text-muted-foreground/40 hidden sm:block">
+            S:{fmtStat(userEffStr)} · D:{fmtStat(userEffDef)} · Sp:{fmtStat(userEffSpd)} · Dx:{fmtStat(userEffDex)}
+          </span>
+          {lockedCount > 0 && (
+            <span className="flex items-center gap-1 text-red-400/80 font-medium ml-auto">
+              <Lock className="w-3 h-3" />
+              {lockedCount} {lockedCount === 1 ? "target" : "targets"} too weak for XP
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Controls */}
       <Card className="bg-card">
@@ -279,15 +447,9 @@ export default function LevelingTargets() {
                 >
                   <Button onClick={handleFetch} disabled={!apiKey} className="gap-2">
                     {phase === "done" ? (
-                      <>
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        Refresh Status
-                      </>
+                      <><RefreshCw className="w-3.5 h-3.5" />Refresh Status</>
                     ) : (
-                      <>
-                        <Search className="w-3.5 h-3.5" />
-                        Fetch Targets
-                      </>
+                      <><Search className="w-3.5 h-3.5" />Fetch Targets</>
                     )}
                   </Button>
                 </motion.div>
@@ -360,6 +522,12 @@ export default function LevelingTargets() {
                 {hospitalCount} in hospital
               </span>
             )}
+            {lockedCount > 0 && (
+              <span className="flex items-center gap-1 text-xs text-red-400/70 bg-red-400/5 border border-red-400/15 px-2 py-0.5 rounded-full">
+                <Lock className="w-3 h-3" />
+                {lockedCount} too strong
+              </span>
+            )}
             {loadingCount > 0 && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground/40">
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -385,119 +553,109 @@ export default function LevelingTargets() {
                   <thead>
                     <tr className="border-b border-border/40 bg-muted/20">
                       <th className="px-4 py-2.5 text-left">
-                        <button
-                          onClick={() => handleSort("name")}
-                          className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          Player
-                          <SortIcon active={sortKey === "name"} dir={sortDir} />
+                        <button onClick={() => handleSort("name")} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+                          Player <SortIcon active={sortKey === "name"} dir={sortDir} />
                         </button>
                       </th>
-                      <th className="px-4 py-2.5 text-left w-16">
-                        <button
-                          onClick={() => handleSort("level")}
-                          className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          Lvl
-                          <SortIcon active={sortKey === "level"} dir={sortDir} />
+                      <th className="px-4 py-2.5 text-left w-12">
+                        <button onClick={() => handleSort("level")} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+                          Lvl <SortIcon active={sortKey === "level"} dir={sortDir} />
+                        </button>
+                      </th>
+                      <th className="px-4 py-2.5 text-left w-32">
+                        <button onClick={() => handleSort("life")} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+                          Life <SortIcon active={sortKey === "life"} dir={sortDir} />
                         </button>
                       </th>
                       <th className="px-4 py-2.5 text-left">
-                        <button
-                          onClick={() => handleSort("status")}
-                          className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          Status
-                          <SortIcon active={sortKey === "status"} dir={sortDir} />
+                        <button onClick={() => handleSort("stats")} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+                          Stats vs Yours <SortIcon active={sortKey === "stats"} dir={sortDir} />
                         </button>
                       </th>
                       <th className="px-4 py-2.5 text-left">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                          Last Action
-                        </span>
+                        <button onClick={() => handleSort("status")} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+                          Status <SortIcon active={sortKey === "status"} dir={sortDir} />
+                        </button>
                       </th>
-                      <th className="px-4 py-2.5 w-24" />
+                      <th className="px-4 py-2.5 text-left">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Last Action</span>
+                      </th>
+                      <th className="px-4 py-2.5 w-28" />
                     </tr>
                   </thead>
                   <tbody>
-                    {displayedTargets.map((target, i) => (
-                      <tr
-                        key={target.id}
-                        className={cn(
-                          "border-b border-border/20 transition-colors hover:bg-muted/10",
-                          i % 2 !== 0 && "bg-muted/[0.04]",
-                          target.statusState === "Okay" &&
-                            "border-l-2 border-l-green-500/40 bg-green-950/15 hover:bg-green-950/25",
-                        )}
-                      >
-                        {/* Player */}
-                        <td className="px-4 py-3">
-                          <a
-                            href={`https://www.torn.com/profiles.php?XID=${target.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 font-medium text-foreground/85 hover:text-primary transition-colors group"
-                          >
-                            <span className="truncate max-w-[160px]">
-                              {target.name === String(target.id) ? (
-                                <span className="font-mono text-muted-foreground/50">
-                                  #{target.id}
-                                </span>
-                              ) : (
-                                target.name
-                              )}
-                            </span>
-                            <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity flex-shrink-0" />
-                          </a>
-                          {target.name !== String(target.id) && (
-                            <span className="text-[10px] text-muted-foreground/35 font-mono">
-                              #{target.id}
-                            </span>
+                    {displayedTargets.map((target, i) => {
+                      const ratio = userEffTotal > 0 && target.targetTotal > 0
+                        ? userEffTotal / target.targetTotal
+                        : null;
+                      const tooStrong = ratio !== null && ratio >= RATIO_LOCK;
+                      const cautionWarn = ratio !== null && ratio >= RATIO_WARN && !tooStrong;
+
+                      return (
+                        <tr
+                          key={target.id}
+                          className={cn(
+                            "border-b border-border/20 transition-colors hover:bg-muted/10",
+                            i % 2 !== 0 && "bg-muted/[0.04]",
+                            target.statusState === "Okay" && !tooStrong &&
+                              "border-l-2 border-l-green-500/40 bg-green-950/15 hover:bg-green-950/25",
+                            tooStrong && "opacity-50",
                           )}
-                        </td>
-
-                        {/* Level */}
-                        <td className="px-4 py-3">
-                          <span className="font-mono font-bold text-foreground/75 tabular-nums">
-                            {target.level > 0 ? target.level : (
-                              <span className="text-muted-foreground/30">—</span>
-                            )}
-                          </span>
-                        </td>
-
-                        {/* Status */}
-                        <td className="px-4 py-3">
-                          <StatusCell target={target} nowMs={nowMs} />
-                        </td>
-
-                        {/* Last Action */}
-                        <td className="px-4 py-3">
-                          <LastActionCell target={target} />
-                        </td>
-
-                        {/* Attack */}
-                        <td className="px-4 py-3 text-right">
-                          {target.statusState !== "Hospital" &&
-                            target.statusState !== "loading" &&
-                            target.statusState !== "error" && (
+                        >
+                          {/* Player */}
+                          <td className="px-4 py-3">
                             <a
-                              href={`https://www.torn.com/loader.php?sid=attack&user2ID=${target.id}`}
+                              href={`https://www.torn.com/profiles.php?XID=${target.id}`}
                               target="_blank"
                               rel="noopener noreferrer"
+                              className="flex items-center gap-1.5 font-medium text-foreground/85 hover:text-primary transition-colors group"
                             >
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-3 text-xs gap-1.5 bg-primary/15 hover:bg-primary/25 text-primary border border-primary/25 hover:border-primary/45"
-                              >
-                                <Swords className="w-3 h-3" />
-                                Attack
-                              </Button>
+                              <span className="truncate max-w-[140px]">
+                                {target.name === String(target.id) ? (
+                                  <span className="font-mono text-muted-foreground/50">#{target.id}</span>
+                                ) : target.name}
+                              </span>
+                              <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity flex-shrink-0" />
                             </a>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                            {target.name !== String(target.id) && (
+                              <span className="text-[10px] text-muted-foreground/35 font-mono">#{target.id}</span>
+                            )}
+                          </td>
+
+                          {/* Level */}
+                          <td className="px-4 py-3">
+                            <span className="font-mono font-bold text-foreground/75 tabular-nums">
+                              {target.level > 0 ? target.level : <span className="text-muted-foreground/30">—</span>}
+                            </span>
+                          </td>
+
+                          {/* Life */}
+                          <td className="px-4 py-3">
+                            <LifeCell target={target} />
+                          </td>
+
+                          {/* Stats vs Yours */}
+                          <td className="px-4 py-3">
+                            <StatsCell target={target} userEffTotal={userEffTotal} />
+                          </td>
+
+                          {/* Status */}
+                          <td className="px-4 py-3">
+                            <StatusCell target={target} nowMs={nowMs} />
+                          </td>
+
+                          {/* Last Action */}
+                          <td className="px-4 py-3">
+                            <LastActionCell target={target} />
+                          </td>
+
+                          {/* Attack */}
+                          <td className="px-4 py-3 text-right">
+                            <AttackCell target={target} userEffTotal={userEffTotal} />
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -505,7 +663,9 @@ export default function LevelingTargets() {
               {phase === "done" && (
                 <div className="px-4 py-2 border-t border-border/20 bg-muted/10">
                   <p className="text-[10px] text-muted-foreground/35">
-                    Fetch again to refresh status. Countdowns update every 30s. Data:{" "}
+                    Fetch again to refresh status. Countdowns update every 30s.
+                    Attack is blocked when your stats are {RATIO_LOCK}× higher than the target — little XP gain for you.
+                    Stats source:{" "}
                     <a
                       href="https://github.com/OranWeb/tc-baldrs-levelling-list"
                       target="_blank"
@@ -529,11 +689,9 @@ export default function LevelingTargets() {
             <TrendingUp className="w-5 h-5 text-muted-foreground/35" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-foreground/50">
-              Select a list and fetch targets
-            </p>
+            <p className="text-sm font-semibold text-foreground/50">Select a list and fetch targets</p>
             <p className="text-xs text-muted-foreground/35 mt-0.5">
-              Attackable players are sorted to the top automatically.
+              Attackable players sort to the top. Attack is blocked if you're too strong for XP gain.
             </p>
           </div>
         </div>
