@@ -787,7 +787,7 @@ export default function Dashboard() {
             {[
               { href: "https://www.torn.com/awards.php", value: data.awards || 0, label: "Awards" },
               { href: "https://www.torn.com/page.php?sid=awards&tab=medals", value: medalsCount, label: "Medals" },
-              { href: "https://www.torn.com/merits.php", value: meritCount, label: "Merits" },
+              { href: "https://www.torn.com/page.php?sid=awards&tab=merits", value: meritCount, label: "Merits" },
               { href: "https://www.torn.com/perks.php", value: perksCount, label: "Perks" },
             ].map(({ href, value, label }) => (
               <a key={label} href={href} target="_blank" rel="noreferrer" className="flex-1 bg-muted/30 rounded p-1.5 border border-border/50 hover:border-primary/40 hover:bg-muted/50 transition-colors">
