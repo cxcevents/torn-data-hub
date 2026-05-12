@@ -785,7 +785,7 @@ export default function Dashboard() {
         <CardContent className="p-3 pt-0 space-y-3">
           <div className="flex justify-between text-center gap-2">
             {[
-              { href: "https://www.torn.com/awards.php", value: data.awards || 0, label: "Awards" },
+              { href: "https://www.torn.com/awards.php", value: data.awards || 0, label: "Honors" },
               { href: "https://www.torn.com/page.php?sid=awards&tab=medals", value: medalsCount, label: "Medals" },
               { href: "https://www.torn.com/page.php?sid=awards&tab=merits", value: meritCount, label: "Merits" },
               { href: "https://www.torn.com/perks.php", value: perksCount, label: "Perks" },
