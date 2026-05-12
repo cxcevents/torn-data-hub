@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useApiKey } from "@/hooks/use-api-key";
-import { Moon, Sun, RefreshCw, Lock, LockOpen } from "lucide-react";
+import { Moon, Sun, RefreshCw, Lock, LockOpen, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useTornUser } from "@/hooks/use-torn-user";
@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useLayoutLock } from "@/hooks/use-layout-lock";
 import { Sidebar } from "@/components/sidebar";
+import { useActiveUsers } from "@/hooks/use-active-users";
 
 function pad(n: number) { return String(n).padStart(2, "0"); }
 
@@ -53,6 +54,7 @@ export function Layout({ children }: LayoutProps) {
   const { apiKey } = useApiKey();
   const { theme, setTheme } = useTheme();
   const { data, refetch, isFetching } = useTornUser(apiKey);
+  const { count: activeUsers } = useActiveUsers();
   const [nextRefresh, setNextRefresh] = useState(30);
   const { locked, toggleLock } = useLayoutLock();
 
@@ -92,8 +94,18 @@ export function Layout({ children }: LayoutProps) {
             <NavClocks />
           </div>
 
-          {/* Right: refresh + lock + theme */}
+          {/* Right: active users + refresh + lock + theme */}
           <div className="flex items-center gap-2 md:gap-3">
+            {activeUsers !== null && (
+              <div
+                className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground border border-border/50 rounded-md px-2 py-1"
+                title="Anonymous count of users currently viewing the dashboard"
+              >
+                <Users className="h-3 w-3 text-primary/60" />
+                <span className="tabular-nums font-medium">{activeUsers}</span>
+                <span className="text-muted-foreground/60">online</span>
+              </div>
+            )}
             {apiKey && (
               <div className="hidden md:flex items-center gap-3 text-sm text-muted-foreground">
                 <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{maskedKey}</span>

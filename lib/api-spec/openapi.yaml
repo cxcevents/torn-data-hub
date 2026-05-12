@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: presence
+    description: Anonymous active-user tracking
 paths:
   /healthz:
     get:
