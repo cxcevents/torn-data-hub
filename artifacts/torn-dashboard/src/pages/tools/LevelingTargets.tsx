@@ -392,7 +392,7 @@ export default function LevelingTargets() {
         <p className="text-sm text-muted-foreground">
           Curated low-stat inactive players from{" "}
           <a
-            href="https://github.com/OranWeb/tc-baldrs-levelling-list"
+            href="https://www.torn.com/forums.php#/p=threads&f=61&t=16034448&b=0&a=0&to=18301173"
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary/80 hover:text-primary underline underline-offset-2"
@@ -754,7 +754,7 @@ export default function LevelingTargets() {
                     Attack is blocked when your stats are {RATIO_LOCK}× higher than the target — little XP gain for you.
                     Stats source:{" "}
                     <a
-                      href="https://github.com/OranWeb/tc-baldrs-levelling-list"
+                      href="https://www.torn.com/forums.php#/p=threads&f=61&t=16034448&b=0&a=0&to=18301173"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="underline underline-offset-2 hover:text-muted-foreground/60"
