@@ -16,9 +16,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const STORAGE_KEY = "leveling_targets_lists_v2";
 
-// Ratio thresholds: userEffTotal / targetTotal
-const RATIO_LOCK = 5;   // >= 5× → block attack
-const RATIO_WARN = 2.5; // >= 2.5× → yellow caution
+// Attack gate: block attack when user is this many times stronger than target
+const RATIO_LOCK = 5;
 
 const LAST_ACTION_PRIORITY: Record<string, number> = {
   Online: 0,
@@ -179,55 +178,19 @@ function StatsCell({
   target: LevelingTarget;
   userEffTotal: number;
 }) {
-  if (target.statusState === "loading") {
-    return <span className="text-xs text-muted-foreground/25">—</span>;
-  }
-  if (!target.targetTotal) {
-    return <span className="text-xs text-muted-foreground/30">No spy data</span>;
+  if (target.statusState === "loading" || !target.targetTotal || !userEffTotal) {
+    return null;
   }
 
-  const ratio = userEffTotal > 0 ? userEffTotal / target.targetTotal : null;
-
-  let ratioLabel = "";
-  let ratioCls = "";
-  if (ratio !== null) {
-    if (ratio >= RATIO_LOCK) {
-      ratioLabel = `${ratio.toFixed(1)}× yours`;
-      ratioCls = "text-red-400";
-    } else if (ratio >= RATIO_WARN) {
-      ratioLabel = `${ratio.toFixed(1)}× yours`;
-      ratioCls = "text-amber-400";
-    } else if (ratio >= 1) {
-      ratioLabel = `${ratio.toFixed(1)}× yours`;
-      ratioCls = "text-yellow-300/70";
-    } else {
-      ratioLabel = `${(1 / ratio).toFixed(1)}× stronger`;
-      ratioCls = "text-green-400";
-    }
-  }
+  // Only show something when the target is stronger — you might lose
+  const targetStronger = target.targetTotal > userEffTotal;
+  if (!targetStronger) return null;
 
   return (
-    <div>
-      <div className="flex items-baseline gap-1.5">
-        <span className="font-mono font-bold text-sm text-foreground/75 tabular-nums">
-          {fmtStat(target.targetTotal)}
-        </span>
-        <span className="text-[10px] text-muted-foreground/40">total</span>
-      </div>
-      {target.targetStr > 0 && (
-        <div className="text-[10px] font-mono text-muted-foreground/35 mt-0.5 flex gap-1.5 tabular-nums">
-          <span title="Strength">S:{fmtStat(target.targetStr)}</span>
-          <span title="Defense">D:{fmtStat(target.targetDef)}</span>
-          <span title="Speed">Sp:{fmtStat(target.targetSpd)}</span>
-          <span title="Dexterity">Dx:{fmtStat(target.targetDex)}</span>
-        </div>
-      )}
-      {ratio !== null && (
-        <span className={cn("text-[10px] font-bold block mt-0.5", ratioCls)}>
-          {ratioLabel}
-        </span>
-      )}
-    </div>
+    <span className="inline-flex items-center gap-1 text-xs font-bold text-red-400 bg-red-400/10 border border-red-400/20 px-2 py-0.5 rounded-full">
+      <ShieldAlert className="w-3 h-3 flex-shrink-0" />
+      May beat you
+    </span>
   );
 }
 
@@ -694,7 +657,7 @@ export default function LevelingTargets() {
                       </th>
                       <th className="px-4 py-2.5 text-left">
                         <button onClick={() => handleSort("stats")} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
-                          Stats vs Yours <SortIcon active={sortKey === "stats"} dir={sortDir} />
+                          Threat <SortIcon active={sortKey === "stats"} dir={sortDir} />
                         </button>
                       </th>
                       <th className="px-4 py-2.5 text-left">
@@ -714,7 +677,6 @@ export default function LevelingTargets() {
                         ? userEffTotal / target.targetTotal
                         : null;
                       const tooStrong = ratio !== null && ratio >= RATIO_LOCK;
-                      const cautionWarn = ratio !== null && ratio >= RATIO_WARN && !tooStrong;
 
                       return (
                         <tr
