@@ -477,7 +477,9 @@ export default function LevelingTargets() {
 
                         {/* Attack */}
                         <td className="px-4 py-3 text-right">
-                          {target.statusState === "Okay" && (
+                          {target.statusState !== "Hospital" &&
+                            target.statusState !== "loading" &&
+                            target.statusState !== "error" && (
                             <a
                               href={`https://www.torn.com/loader.php?sid=attack&user2ID=${target.id}`}
                               target="_blank"
