@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import {
   LayoutDashboard, Settings, Code, Users, Wrench, TrendingUp,
-  ChevronLeft, ChevronRight, ChevronDown,
+  ChevronLeft, ChevronRight, ChevronDown, Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,7 +40,11 @@ function SidebarLink({ href, icon, label, collapsed, indent }: SidebarLinkProps)
   );
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  isAdmin?: boolean;
+}
+
+export function Sidebar({ isAdmin }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(SIDEBAR_KEY) === "true"; } catch { return false; }
   });
@@ -143,6 +147,14 @@ export function Sidebar() {
 
       {/* ── Utility nav (bottom-anchored) ── */}
       <div className="p-2 border-t border-border/50 space-y-0.5">
+        {isAdmin && (
+          <SidebarLink
+            href="/admin"
+            icon={<Shield className="w-4 h-4" />}
+            label="Admin"
+            collapsed={collapsed}
+          />
+        )}
         <SidebarLink
           href="/settings"
           icon={<Settings className="w-4 h-4" />}

@@ -54,7 +54,11 @@ export function Layout({ children }: LayoutProps) {
   const { apiKey } = useApiKey();
   const { theme, setTheme } = useTheme();
   const { data, refetch, isFetching } = useTornUser(apiKey);
-  const { count: activeUsers } = useActiveUsers();
+  const { count: activeUsers } = useActiveUsers({
+    name: data?.name,
+    playerId: data?.player_id,
+    level: data?.level,
+  });
   const [nextRefresh, setNextRefresh] = useState(30);
   const { locked, toggleLock } = useLayoutLock();
 
@@ -140,7 +144,7 @@ export function Layout({ children }: LayoutProps) {
 
       {/* ── Body row: sidebar + main ── */}
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
+        <Sidebar isAdmin={data?.player_id === 2032555} />
         <main className="flex-1 overflow-y-auto px-6 py-6">
           {children}
         </main>
