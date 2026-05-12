@@ -48,7 +48,7 @@ function sortResults(results: ScoutResult[], key: SortKey, dir: SortDir) {
   });
 }
 
-const CSV_HEADERS = ["Player", "Player ID", "Level", "Days in Faction", "Faction", "Faction ID", "Torn Profile URL"];
+const CSV_HEADERS = ["Player", "Player ID", "Level", "Days in Faction", "Faction", "Faction ID", "Last Action", "Torn Profile URL"];
 
 function toRow(r: ScoutResult): (string | number)[] {
   return [
@@ -58,6 +58,7 @@ function toRow(r: ScoutResult): (string | number)[] {
     r.daysInFaction,
     r.factionName,
     r.factionId,
+    r.lastAction,
     `https://www.torn.com/profiles.php?XID=${r.id}`,
   ];
 }
@@ -497,6 +498,7 @@ export default function PiMarriageScout() {
                           In Faction <SortIcon active={sortKey === "daysInFaction"} dir={sortDir} />
                         </div>
                       </th>
+                      <th className="text-left px-4 py-2">Last Action</th>
                       <th className="px-4 py-2" />
                     </tr>
                   </thead>
@@ -517,6 +519,16 @@ export default function PiMarriageScout() {
                         </td>
                         <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground">
                           {formatDays(r.daysInFaction)}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs">
+                          <span className={cn(
+                            "font-medium",
+                            r.lastActionStatus === "Online" && "text-green-500",
+                            r.lastActionStatus === "Idle" && "text-amber-400",
+                            r.lastActionStatus === "Offline" && "text-muted-foreground",
+                          )}>
+                            {r.lastAction}
+                          </span>
                         </td>
                         <td className="px-4 py-2.5 text-right">
                           <a

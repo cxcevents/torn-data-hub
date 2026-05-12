@@ -7,6 +7,8 @@ export interface ScoutResult {
   daysInFaction: number;
   factionId: number;
   factionName: string;
+  lastAction: string;
+  lastActionStatus: string;
 }
 
 export type ScanPhase = "idle" | "fetching" | "scanning" | "done" | "error";
@@ -38,6 +40,7 @@ interface ProfileResponse {
   error?: { code: number; error: string };
   married?: { spouse_id: number; spouse_name: string; duration: number };
   property?: string;
+  last_action?: { relative: string; status: string; timestamp: number };
 }
 
 function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)); }
@@ -129,6 +132,8 @@ export function usePiScout(apiKey: string | null) {
               daysInFaction: member.daysInFaction,
               factionId: member.factionId,
               factionName: member.factionName,
+              lastAction: profile.last_action?.relative ?? "Unknown",
+              lastActionStatus: profile.last_action?.status ?? "unknown",
             });
           }
         } catch {
