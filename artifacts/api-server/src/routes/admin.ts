@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { z } from "zod";
-import { cleanup, getSessions } from "../lib/session-store";
+import { cleanup, getSessions, getHistory, getActivePlayerIds } from "../lib/session-store";
 
 const router: IRouter = Router();
 
@@ -33,6 +33,8 @@ router.post("/admin/sessions", async (req, res) => {
 
   cleanup();
   const now = Date.now();
+  const activeIds = getActivePlayerIds();
+
   const sessions = getSessions()
     .sort((a, b) => b.lastSeen - a.lastSeen)
     .map((s) => ({
@@ -43,7 +45,19 @@ router.post("/admin/sessions", async (req, res) => {
       onlineForSeconds: Math.round((now - s.firstSeen) / 1000),
     }));
 
-  res.json({ sessions, total: sessions.length });
+  const historicalPlayers = getHistory()
+    .filter((h) => !activeIds.has(h.playerId))
+    .sort((a, b) => b.lastSeen - a.lastSeen)
+    .map((h) => ({
+      name: h.name,
+      playerId: h.playerId,
+      level: h.level,
+      lastSeenAgo: Math.round((now - h.lastSeen) / 1000),
+      firstSeenAgo: Math.round((now - h.firstSeen) / 1000),
+      visitCount: h.visitCount,
+    }));
+
+  res.json({ sessions, total: sessions.length, history: historicalPlayers });
 });
 
 export default router;
