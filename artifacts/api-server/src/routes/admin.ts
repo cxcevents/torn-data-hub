@@ -35,8 +35,16 @@ router.post("/admin/sessions", async (req, res) => {
   const now = Date.now();
   const activeIds = getActivePlayerIds();
 
+  // Deduplicate by playerId — keep the most recently seen session per identified player
+  const seenPlayerIds = new Set<number>();
   const sessions = getSessions()
     .sort((a, b) => b.lastSeen - a.lastSeen)
+    .filter((s) => {
+      if (!s.playerId) return true; // always include anonymous sessions
+      if (seenPlayerIds.has(s.playerId)) return false;
+      seenPlayerIds.add(s.playerId);
+      return true;
+    })
     .map((s) => ({
       name: s.name,
       playerId: s.playerId,
