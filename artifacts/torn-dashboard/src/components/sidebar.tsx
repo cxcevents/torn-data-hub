@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation } from "wouter";
 import {
   LayoutDashboard, Settings, Code, Users, Wrench,
@@ -72,9 +72,8 @@ export function Sidebar() {
         collapsed ? "w-14" : "w-56"
       )}
     >
-      {/* Nav content */}
+      {/* ── Primary nav (top) ── */}
       <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto overflow-x-hidden">
-        {/* Dashboard */}
         <SidebarLink
           href="/"
           icon={<LayoutDashboard className="w-4 h-4" />}
@@ -82,10 +81,9 @@ export function Sidebar() {
           collapsed={collapsed}
         />
 
-        {/* Separator */}
         <div className="my-2 border-t border-border/50" />
 
-        {/* N00b T00ls section */}
+        {/* N00b T00ls collapsible section */}
         <div>
           <button
             onClick={toggleTools}
@@ -134,11 +132,10 @@ export function Sidebar() {
             )}
           </AnimatePresence>
         </div>
+      </nav>
 
-        {/* Separator */}
-        <div className="my-2 border-t border-border/50" />
-
-        {/* Utility links */}
+      {/* ── Utility nav (bottom-anchored) ── */}
+      <div className="p-2 border-t border-border/50 space-y-0.5">
         <SidebarLink
           href="/settings"
           icon={<Settings className="w-4 h-4" />}
@@ -151,14 +148,12 @@ export function Sidebar() {
           label="Raw API Data"
           collapsed={collapsed}
         />
-      </nav>
 
-      {/* Collapse toggle */}
-      <div className="p-2 border-t border-border/50">
+        {/* Collapse toggle */}
         <button
           onClick={toggleCollapse}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="w-full flex items-center justify-center gap-2 rounded-md px-2 py-2 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          className="w-full flex items-center justify-center gap-2 rounded-md px-2 py-2 mt-1 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
         >
           {collapsed
             ? <ChevronRight className="w-4 h-4" />

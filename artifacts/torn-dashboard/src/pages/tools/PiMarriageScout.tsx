@@ -1,32 +1,15 @@
-import { useState, useRef, useCallback } from "react";
+import { useState } from "react";
 import { useApiKey } from "@/hooks/use-api-key";
+import { usePiScout, parseFactionIds } from "@/hooks/use-pi-scout";
+import type { ScoutResult } from "@/hooks/use-pi-scout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Users, ExternalLink, ChevronUp, ChevronDown, AlertCircle, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface ScoutResult {
-  id: number;
-  name: string;
-  level: number;
-  daysInFaction: number;
-  factionId: number;
-  factionName: string;
-}
-
-type ScanPhase = "idle" | "fetching" | "scanning" | "done" | "error";
 type SortKey = "level" | "daysInFaction" | "name";
 type SortDir = "asc" | "desc";
-
-function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
-
-function parseFactionIds(raw: string): number[] {
-  return raw
-    .split(/[\s,;]+/)
-    .map(s => parseInt(s.trim(), 10))
-    .filter(n => Number.isFinite(n) && n > 0);
-}
 
 function formatDays(days: number): string {
   if (days >= 365) return `${(days / 365).toFixed(1)}y`;
@@ -34,136 +17,45 @@ function formatDays(days: number): string {
   return `${days}d`;
 }
 
+function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
+  if (!active) return <ChevronUp className="w-3 h-3 opacity-30" />;
+  return dir === "asc"
+    ? <ChevronUp className="w-3 h-3 text-primary" />
+    : <ChevronDown className="w-3 h-3 text-primary" />;
+}
+
+function sortResults(results: ScoutResult[], key: SortKey, dir: SortDir) {
+  return [...results].sort((a, b) => {
+    let cmp = 0;
+    if (key === "level") cmp = a.level - b.level;
+    else if (key === "daysInFaction") cmp = a.daysInFaction - b.daysInFaction;
+    else cmp = a.name.localeCompare(b.name);
+    return dir === "asc" ? cmp : -cmp;
+  });
+}
+
 export default function PiMarriageScout() {
   const { apiKey } = useApiKey();
   const [input, setInput] = useState("");
-  const [phase, setPhase] = useState<ScanPhase>("idle");
-  const [total, setTotal] = useState(0);
-  const [checked, setChecked] = useState(0);
-  const [results, setResults] = useState<ScoutResult[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("level");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
-  const cancelledRef = useRef(false);
+  const { state, scan, cancel } = usePiScout(apiKey);
+
+  const { phase, total, checked, results, error } = state;
+  const isRunning = phase === "fetching" || phase === "scanning";
+  const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
 
   const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir(d => d === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(key);
-      setSortDir(key === "name" ? "asc" : "asc");
-    }
+    if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortKey(key); setSortDir("asc"); }
   };
 
-  const sortedResults = [...results].sort((a, b) => {
-    let cmp = 0;
-    if (sortKey === "level") cmp = a.level - b.level;
-    else if (sortKey === "daysInFaction") cmp = a.daysInFaction - b.daysInFaction;
-    else cmp = a.name.localeCompare(b.name);
-    return sortDir === "asc" ? cmp : -cmp;
-  });
+  const sortedResults = sortResults(results, sortKey, sortDir);
 
-  const cancelScan = () => { cancelledRef.current = true; };
-
-  const startScan = useCallback(async () => {
-    if (!apiKey) return;
-    const ids = parseFactionIds(input);
-    if (ids.length === 0) {
-      setError("Enter at least one valid faction ID.");
-      setPhase("error");
-      return;
-    }
-
-    cancelledRef.current = false;
-    setPhase("fetching");
-    setResults([]);
-    setChecked(0);
-    setTotal(0);
-    setError(null);
-
-    try {
-      // ── Step 1: fetch member lists for all factions ──
-      type MemberStub = { id: string; name: string; level: number; daysInFaction: number; factionId: number; factionName: string };
-      const allMembers: MemberStub[] = [];
-
-      for (const factionId of ids) {
-        if (cancelledRef.current) break;
-        const res = await fetch(`https://api.torn.com/faction/${factionId}?selections=basic&key=${apiKey}`);
-        const data = await res.json();
-        if (data.error) throw new Error(`Faction ${factionId}: ${data.error.error}`);
-        const memberEntries = Object.entries(data.members ?? {}) as [string, any][];
-        for (const [uid, m] of memberEntries) {
-          allMembers.push({
-            id: uid,
-            name: m.name,
-            level: m.level,
-            daysInFaction: m.days_in_faction,
-            factionId,
-            factionName: data.name,
-          });
-        }
-      }
-
-      if (cancelledRef.current) { setPhase("done"); return; }
-
-      setTotal(allMembers.length);
-      setPhase("scanning");
-
-      // ── Step 2: profile-check each member ──
-      const hits: ScoutResult[] = [];
-
-      for (let i = 0; i < allMembers.length; i++) {
-        if (cancelledRef.current) break;
-
-        const member = allMembers[i];
-        await sleep(300);
-        if (cancelledRef.current) break;
-
-        try {
-          const res = await fetch(`https://api.torn.com/user/${member.id}?selections=profile&key=${apiKey}`);
-          const profile = await res.json();
-
-          if (!profile.error) {
-            const isUnmarried = !profile.married?.spouse_id;
-            const prop: string = (profile.property ?? "").toLowerCase();
-            const isPI = prop.includes("private island");
-
-            if (isUnmarried && isPI) {
-              const hit: ScoutResult = {
-                id: Number(member.id),
-                name: member.name,
-                level: member.level,
-                daysInFaction: member.daysInFaction,
-                factionId: member.factionId,
-                factionName: member.factionName,
-              };
-              hits.push(hit);
-              setResults([...hits]);
-            }
-          }
-        } catch {
-          // skip this member on network error
-        }
-
-        setChecked(i + 1);
-      }
-
-      setPhase("done");
-    } catch (err: any) {
-      setError(err.message ?? "Unknown error");
-      setPhase("error");
-    }
-  }, [apiKey, input]);
-
-  const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
-  const isRunning = phase === "fetching" || phase === "scanning";
-
-  function SortIcon({ k }: { k: SortKey }) {
-    if (sortKey !== k) return <ChevronUp className="w-3 h-3 opacity-30" />;
-    return sortDir === "asc"
-      ? <ChevronUp className="w-3 h-3 text-primary" />
-      : <ChevronDown className="w-3 h-3 text-primary" />;
-  }
+  const handleScan = () => {
+    if (parseFactionIds(input).length === 0) return;
+    scan(input);
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -174,17 +66,23 @@ export default function PiMarriageScout() {
             <Users className="w-4 h-4 text-primary" />
           </div>
           <h1 className="text-2xl font-black tracking-tight">PI Marriage Scout</h1>
-          <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border border-primary/30 bg-primary/10 text-primary">N00b T00ls</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border border-primary/30 bg-primary/10 text-primary">
+            N00b T00ls
+          </span>
         </div>
         <p className="text-sm text-muted-foreground">
-          Scans faction members and surfaces players who are <strong className="text-foreground">unmarried</strong> and live on a <strong className="text-foreground">Private Island</strong>.
+          Scans faction members and surfaces players who are{" "}
+          <strong className="text-foreground">unmarried</strong> and live on a{" "}
+          <strong className="text-foreground">Private Island</strong>.
         </p>
       </div>
 
       {/* Input card */}
       <Card className="bg-card">
         <CardHeader className="p-4 pb-3">
-          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Faction IDs to Scan</CardTitle>
+          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Faction IDs to Scan
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0 space-y-3">
           {!apiKey && (
@@ -198,7 +96,7 @@ export default function PiMarriageScout() {
               type="text"
               value={input}
               onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && !isRunning && apiKey) startScan(); }}
+              onKeyDown={e => { if (e.key === "Enter" && !isRunning && apiKey) handleScan(); }}
               placeholder="e.g. 7024, 7893, 12345"
               disabled={isRunning}
               className={cn(
@@ -208,16 +106,16 @@ export default function PiMarriageScout() {
               )}
             />
             {isRunning ? (
-              <Button variant="outline" onClick={cancelScan} className="gap-2 border-destructive/40 text-destructive hover:bg-destructive/10">
+              <Button
+                variant="outline"
+                onClick={cancel}
+                className="gap-2 border-destructive/40 text-destructive hover:bg-destructive/10"
+              >
                 <X className="w-4 h-4" />
                 Cancel
               </Button>
             ) : (
-              <Button
-                onClick={startScan}
-                disabled={!apiKey || !input.trim()}
-                className="gap-2"
-              >
+              <Button onClick={handleScan} disabled={!apiKey || !input.trim()} className="gap-2">
                 <Search className="w-4 h-4" />
                 Scan
               </Button>
@@ -297,20 +195,26 @@ export default function PiMarriageScout() {
                         className="text-left px-4 py-2 cursor-pointer hover:text-foreground select-none"
                         onClick={() => handleSort("name")}
                       >
-                        <div className="flex items-center gap-1">Player <SortIcon k="name" /></div>
+                        <div className="flex items-center gap-1">
+                          Player <SortIcon active={sortKey === "name"} dir={sortDir} />
+                        </div>
                       </th>
                       <th
                         className="text-left px-4 py-2 cursor-pointer hover:text-foreground select-none"
                         onClick={() => handleSort("level")}
                       >
-                        <div className="flex items-center gap-1">Lvl <SortIcon k="level" /></div>
+                        <div className="flex items-center gap-1">
+                          Lvl <SortIcon active={sortKey === "level"} dir={sortDir} />
+                        </div>
                       </th>
                       <th className="text-left px-4 py-2">Faction</th>
                       <th
                         className="text-left px-4 py-2 cursor-pointer hover:text-foreground select-none"
                         onClick={() => handleSort("daysInFaction")}
                       >
-                        <div className="flex items-center gap-1">In Faction <SortIcon k="daysInFaction" /></div>
+                        <div className="flex items-center gap-1">
+                          In Faction <SortIcon active={sortKey === "daysInFaction"} dir={sortDir} />
+                        </div>
                       </th>
                       <th className="px-4 py-2" />
                     </tr>
