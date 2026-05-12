@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import {
-  LayoutDashboard, Settings, Code, Users, Wrench,
+  LayoutDashboard, Settings, Code, Users, Wrench, TrendingUp,
   ChevronLeft, ChevronRight, ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -124,6 +124,13 @@ export function Sidebar() {
                     href="/tools/pi-scout"
                     icon={<Users className="w-4 h-4" />}
                     label="PI Marriage Scout"
+                    collapsed={collapsed}
+                    indent
+                  />
+                  <SidebarLink
+                    href="/tools/leveling-targets"
+                    icon={<TrendingUp className="w-4 h-4" />}
+                    label="Leveling Targets"
                     collapsed={collapsed}
                     indent
                   />
