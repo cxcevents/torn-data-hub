@@ -1,12 +1,13 @@
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { useApiKey } from "@/hooks/use-api-key";
-import { Settings, Code, Moon, Sun, RefreshCw, Lock, LockOpen } from "lucide-react";
+import { Moon, Sun, RefreshCw, Lock, LockOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useTornUser } from "@/hooks/use-torn-user";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useLayoutLock } from "@/hooks/use-layout-lock";
+import { Sidebar } from "@/components/sidebar";
 
 function pad(n: number) { return String(n).padStart(2, "0"); }
 
@@ -48,73 +49,35 @@ interface LayoutProps {
   children: React.ReactNode;
 }
 
-interface NavIconProps {
-  href: string;
-  icon: React.ReactNode;
-  currentPath: string;
-  navigate: (to: string) => void;
-}
-
-function NavIcon({ href, icon, currentPath, navigate }: NavIconProps) {
-  const isActive = currentPath === href;
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (isActive) {
-      navigate("/");
-    } else {
-      navigate(href);
-    }
-  };
-
-  return (
-    <button
-      onClick={handleClick}
-      className={cn(
-        "h-9 w-9 flex items-center justify-center rounded-md transition-colors",
-        isActive
-          ? "bg-accent text-foreground"
-          : "text-muted-foreground hover:text-foreground hover:bg-accent"
-      )}
-    >
-      {icon}
-    </button>
-  );
-}
-
 export function Layout({ children }: LayoutProps) {
   const { apiKey } = useApiKey();
   const { theme, setTheme } = useTheme();
   const { data, refetch, isFetching } = useTornUser(apiKey);
   const [nextRefresh, setNextRefresh] = useState(30);
-  const [location, navigate] = useLocation();
   const { locked, toggleLock } = useLayoutLock();
 
   useEffect(() => {
     if (!apiKey) return;
     const interval = setInterval(() => {
       setNextRefresh((prev) => {
-        if (prev <= 1) {
-          refetch();
-          return 30;
-        }
+        if (prev <= 1) { refetch(); return 30; }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(interval);
   }, [apiKey, refetch]);
 
-  const handleManualRefresh = () => {
-    refetch();
-    setNextRefresh(30);
-  };
-
+  const handleManualRefresh = () => { refetch(); setNextRefresh(30); };
   const maskedKey = apiKey ? `••••••••${apiKey.slice(-4)}` : "";
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 h-14 flex items-center justify-between">
+    <div className="h-screen flex flex-col overflow-hidden bg-background text-foreground">
+
+      {/* ── Persistent Header ── */}
+      <header className="flex-shrink-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 h-14">
+        <div className="px-4 h-full flex items-center justify-between">
+
+          {/* Left: logo + player + clocks */}
           <div className="flex items-center gap-4">
             <Link href="/" className="font-bold text-xl text-primary flex items-center gap-2">
               <span className="bg-primary text-primary-foreground px-2 py-1 rounded-md text-sm leading-none">TORN</span>
@@ -129,56 +92,47 @@ export function Layout({ children }: LayoutProps) {
             <NavClocks />
           </div>
 
-          <div className="flex items-center gap-2 md:gap-4">
+          {/* Right: refresh + lock + theme */}
+          <div className="flex items-center gap-2 md:gap-3">
             {apiKey && (
               <div className="hidden md:flex items-center gap-3 text-sm text-muted-foreground">
                 <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{maskedKey}</span>
-                <div className="flex items-center gap-2">
-                  <span>Auto-refresh in <span className="inline-block w-5 text-right tabular-nums">{nextRefresh}</span>s</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleManualRefresh}
-                    disabled={isFetching}
-                    className="h-8 w-8"
-                  >
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs">Refresh in <span className="inline-block w-5 text-right tabular-nums">{nextRefresh}</span>s</span>
+                  <Button variant="ghost" size="icon" onClick={handleManualRefresh} disabled={isFetching} className="h-8 w-8">
                     <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin text-primary" : ""}`} />
                   </Button>
                 </div>
               </div>
             )}
-
-            <nav className="flex items-center gap-1">
-              <NavIcon href="/raw" icon={<Code className="h-4 w-4" />} currentPath={location} navigate={navigate} />
-              <NavIcon href="/settings" icon={<Settings className="h-4 w-4" />} currentPath={location} navigate={navigate} />
-              <button
-                onClick={toggleLock}
-                title={locked ? "Unlock layout to rearrange cards" : "Lock layout"}
-                className={cn(
-                  "h-9 w-9 flex items-center justify-center rounded-md transition-colors",
-                  !locked
-                    ? "bg-primary/15 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                )}
-              >
-                {locked ? <Lock className="h-4 w-4" /> : <LockOpen className="h-4 w-4" />}
-              </button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 text-muted-foreground hover:text-foreground"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              >
-                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              </Button>
-            </nav>
+            <button
+              onClick={toggleLock}
+              title={locked ? "Unlock layout" : "Lock layout"}
+              className={cn(
+                "h-9 w-9 flex items-center justify-center rounded-md transition-colors",
+                !locked ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+              )}
+            >
+              {locked ? <Lock className="h-4 w-4" /> : <LockOpen className="h-4 w-4" />}
+            </button>
+            <Button
+              variant="ghost" size="icon"
+              className="h-9 w-9 text-muted-foreground hover:text-foreground"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 container mx-auto px-4 py-6">
-        {children}
-      </main>
+      {/* ── Body row: sidebar + main ── */}
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar />
+        <main className="flex-1 overflow-y-auto px-6 py-6">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

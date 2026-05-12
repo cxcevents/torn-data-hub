@@ -43,9 +43,6 @@ export function useXanaxLog(apiKey: string | null) {
 
       const entries = Object.values(data.log ?? {}) as LogEntry[];
 
-      console.log("[XanaxLog] total entries:", entries.length);
-      console.log("[XanaxLog] sample entries:", entries.slice(0, 20).map(e => ({ title: e.title, category: e.category, data: e.data })));
-
       const xanaxEntries = entries
         .filter(isXanaxEntry)
         .sort((a, b) => b.timestamp - a.timestamp); // newest first

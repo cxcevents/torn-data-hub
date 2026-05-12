@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import Settings from "@/pages/Settings";
 import Raw from "@/pages/Raw";
+import PiMarriageScout from "@/pages/tools/PiMarriageScout";
 import { Layout } from "@/components/layout";
 
 const queryClient = new QueryClient();
@@ -18,6 +19,7 @@ function Router() {
         <Route path="/" component={Dashboard} />
         <Route path="/settings" component={Settings} />
         <Route path="/raw" component={Raw} />
+        <Route path="/tools/pi-scout" component={PiMarriageScout} />
         <Route component={NotFound} />
       </Switch>
     </Layout>
