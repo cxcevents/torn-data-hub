@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { writeFaction } from "@/lib/pi-scout-cache";
 
 export interface ScoutResult {
   id: number;
@@ -19,6 +20,7 @@ export interface ScanState {
   checked: number;
   results: ScoutResult[];
   error: string | null;
+  cacheVersion: number;
 }
 
 interface FactionMember {
@@ -28,6 +30,12 @@ interface FactionMember {
   daysInFaction: number;
   factionId: number;
   factionName: string;
+}
+
+interface FactionGroup {
+  factionId: number;
+  factionName: string;
+  members: FactionMember[];
 }
 
 interface FactionResponse {
@@ -52,7 +60,7 @@ export function parseFactionIds(raw: string): number[] {
     .filter(n => Number.isFinite(n) && n > 0);
 }
 
-async function fetchFactionRoster(factionId: number, apiKey: string): Promise<{ name: string; members: FactionMember[] }> {
+async function fetchFactionRoster(factionId: number, apiKey: string): Promise<FactionGroup> {
   const res = await fetch(`https://api.torn.com/faction/${factionId}?selections=basic&key=${apiKey}`);
   const data: FactionResponse = await res.json();
   if (data.error) throw new Error(`Faction ${factionId}: ${data.error.error}`);
@@ -64,7 +72,7 @@ async function fetchFactionRoster(factionId: number, apiKey: string): Promise<{ 
     factionId,
     factionName: data.name ?? String(factionId),
   }));
-  return { name: data.name ?? String(factionId), members };
+  return { factionId, factionName: data.name ?? String(factionId), members };
 }
 
 async function fetchMemberProfile(userId: string, apiKey: string): Promise<ProfileResponse> {
@@ -78,7 +86,9 @@ function isUnmarriedPI(profile: ProfileResponse): boolean {
   return isUnmarried && isPI;
 }
 
-const INITIAL_STATE: ScanState = { phase: "idle", total: 0, checked: 0, results: [], error: null };
+const INITIAL_STATE: ScanState = {
+  phase: "idle", total: 0, checked: 0, results: [], error: null, cacheVersion: 0,
+};
 
 export function usePiScout(apiKey: string | null) {
   const [state, setState] = useState<ScanState>(INITIAL_STATE);
@@ -93,54 +103,76 @@ export function usePiScout(apiKey: string | null) {
 
     const ids = parseFactionIds(factionIdsInput);
     if (ids.length === 0) {
-      setState({ ...INITIAL_STATE, phase: "error", error: "Enter at least one valid faction ID." });
+      setState({ ...INITIAL_STATE, phase: "error", error: "Enter at least one valid faction ID.", cacheVersion: 0 });
       return;
     }
 
     cancelledRef.current = false;
-    setState({ phase: "fetching", total: 0, checked: 0, results: [], error: null });
+    setState({ phase: "fetching", total: 0, checked: 0, results: [], error: null, cacheVersion: 0 });
 
     try {
-      // ── Step 1: collect all faction members ──
-      const allMembers: FactionMember[] = [];
+      // ── Phase 1: fetch all rosters to get total member count ──
+      const groups: FactionGroup[] = [];
       for (const id of ids) {
         if (cancelledRef.current) break;
-        const { members } = await fetchFactionRoster(id, apiKey);
-        allMembers.push(...members);
+        const group = await fetchFactionRoster(id, apiKey);
+        groups.push(group);
       }
 
       if (cancelledRef.current) { setState(s => ({ ...s, phase: "done" })); return; }
 
-      setState(s => ({ ...s, phase: "scanning", total: allMembers.length }));
+      const total = groups.reduce((acc, g) => acc + g.members.length, 0);
+      setState(s => ({ ...s, phase: "scanning", total }));
 
-      // ── Step 2: profile-check each member ──
-      const hits: ScoutResult[] = [];
-      for (let i = 0; i < allMembers.length; i++) {
+      // ── Phase 2: scan faction by faction, cache each on completion ──
+      const allHits: ScoutResult[] = [];
+      let checkedCount = 0;
+
+      for (const group of groups) {
         if (cancelledRef.current) break;
 
-        await sleep(300);
-        if (cancelledRef.current) break;
+        const factionHits: ScoutResult[] = [];
 
-        const member = allMembers[i];
-        try {
-          const profile = await fetchMemberProfile(member.id, apiKey);
-          if (!profile.error && isUnmarriedPI(profile)) {
-            hits.push({
-              id: Number(member.id),
-              name: member.name,
-              level: member.level,
-              daysInFaction: member.daysInFaction,
-              factionId: member.factionId,
-              factionName: member.factionName,
-              lastAction: profile.last_action?.relative ?? "Unknown",
-              lastActionStatus: profile.last_action?.status ?? "unknown",
-            });
+        for (const member of group.members) {
+          if (cancelledRef.current) break;
+
+          await sleep(300);
+          if (cancelledRef.current) break;
+
+          try {
+            const profile = await fetchMemberProfile(member.id, apiKey);
+            if (!profile.error && isUnmarriedPI(profile)) {
+              const hit: ScoutResult = {
+                id: Number(member.id),
+                name: member.name,
+                level: member.level,
+                daysInFaction: member.daysInFaction,
+                factionId: member.factionId,
+                factionName: member.factionName,
+                lastAction: profile.last_action?.relative ?? "Unknown",
+                lastActionStatus: profile.last_action?.status ?? "unknown",
+              };
+              factionHits.push(hit);
+              allHits.push(hit);
+            }
+          } catch {
+            // skip member on network error
           }
-        } catch {
-          // skip member on network error
+
+          checkedCount++;
+          setState(s => ({ ...s, checked: checkedCount, results: [...allHits] }));
         }
 
-        setState(s => ({ ...s, checked: i + 1, results: [...hits] }));
+        // Save this faction's results to cache when its members are all done
+        if (!cancelledRef.current) {
+          writeFaction({
+            factionId: group.factionId,
+            factionName: group.factionName,
+            scannedAt: Date.now(),
+            results: factionHits,
+          });
+          setState(s => ({ ...s, cacheVersion: s.cacheVersion + 1 }));
+        }
       }
 
       setState(s => ({ ...s, phase: "done" }));

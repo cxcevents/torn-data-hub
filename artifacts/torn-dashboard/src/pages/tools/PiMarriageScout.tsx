@@ -1,13 +1,17 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useApiKey } from "@/hooks/use-api-key";
 import { usePiScout } from "@/hooks/use-pi-scout";
 import type { ScoutResult } from "@/hooks/use-pi-scout";
+import {
+  readCache, readChecked, writeChecked, deleteFaction, clearAllCache, formatAge,
+} from "@/lib/pi-scout-cache";
+import type { CacheStore } from "@/lib/pi-scout-cache";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Users, ExternalLink, ChevronUp, ChevronDown,
   AlertCircle, Search, X, Info, Loader2, CheckCircle2, XCircle,
-  Download, Clipboard, ClipboardCheck,
+  Download, Clipboard, ClipboardCheck, RefreshCw, Database, Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -52,13 +56,8 @@ const CSV_HEADERS = ["Player", "Player ID", "Level", "Days in Faction", "Faction
 
 function toRow(r: ScoutResult): (string | number)[] {
   return [
-    r.name,
-    r.id,
-    r.level,
-    r.daysInFaction,
-    r.factionName,
-    r.factionId,
-    r.lastAction,
+    r.name, r.id, r.level, r.daysInFaction,
+    r.factionName, r.factionId, r.lastAction,
     `https://www.torn.com/profiles.php?XID=${r.id}`,
   ];
 }
@@ -87,6 +86,17 @@ async function copyForSheets(results: ScoutResult[]): Promise<void> {
   await navigator.clipboard.writeText(tsv);
 }
 
+function mergeResults(ids: Set<number>, store: CacheStore): ScoutResult[] {
+  const seen = new Set<number>();
+  const out: ScoutResult[] = [];
+  for (const id of ids) {
+    for (const r of store[id]?.results ?? []) {
+      if (!seen.has(r.id)) { seen.add(r.id); out.push(r); }
+    }
+  }
+  return out;
+}
+
 export default function PiMarriageScout() {
   const { apiKey } = useApiKey();
   const uidRef = useRef(1);
@@ -95,16 +105,87 @@ export default function PiMarriageScout() {
   const [sortKey, setSortKey] = useState<SortKey>("level");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [copied, setCopied] = useState(false);
-  const { state, scan, cancel } = usePiScout(apiKey);
 
-  const { phase, total, checked, results, error } = state;
+  // ── Cache state ──────────────────────────────────────────────────
+  const [cacheStore, setCacheStore] = useState<CacheStore>(() => readCache());
+  const [checkedIds, setCheckedIds] = useState<Set<number>>(() => new Set(readChecked()));
+
+  const refreshCache = useCallback(() => {
+    setCacheStore(readCache());
+  }, []);
+
+  const { state, scan, cancel } = usePiScout(apiKey);
+  const { phase, total, checked, results, error, cacheVersion } = state;
   const isRunning = phase === "fetching" || phase === "scanning";
   const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
+
+  // Refresh cache store and auto-check newly scanned factions
+  useEffect(() => {
+    if (cacheVersion === 0) return;
+    const freshStore = readCache();
+    setCacheStore(freshStore);
+    // Auto-check any factions that just got cached
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      for (const id of Object.keys(freshStore).map(Number)) {
+        next.add(id);
+      }
+      writeChecked(Array.from(next));
+      return next;
+    });
+  }, [cacheVersion]);
+
+  const cachedFactions = Object.values(cacheStore).sort((a, b) => b.scannedAt - a.scannedAt);
+  const hasCached = cachedFactions.length > 0;
+
+  const toggleChecked = (id: number) => {
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      writeChecked(Array.from(next));
+      return next;
+    });
+  };
+
+  const checkAll = () => {
+    const next = new Set(cachedFactions.map(f => f.factionId));
+    setCheckedIds(next);
+    writeChecked(Array.from(next));
+  };
+
+  const uncheckAll = () => {
+    setCheckedIds(new Set());
+    writeChecked([]);
+  };
+
+  const handleDeleteFaction = (id: number) => {
+    deleteFaction(id);
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      next.delete(id);
+      writeChecked(Array.from(next));
+      return next;
+    });
+    refreshCache();
+  };
+
+  const handleClearAll = () => {
+    clearAllCache();
+    setCacheStore({});
+    setCheckedIds(new Set());
+  };
+
+  // ── Displayed results ────────────────────────────────────────────
+  // During a live scan: show live hits. Otherwise: merge from checked cache entries.
+  const displayedResults = isRunning
+    ? results
+    : mergeResults(checkedIds, cacheStore);
 
   const verifiedFields = fields.filter(f => f.status === "verified" && f.factionId);
   const canScan = verifiedFields.length > 0;
 
-  // ── Faction lookup ──────────────────────────────────────────────
+  // ── Faction lookup ───────────────────────────────────────────────
   const lookupFaction = async (uid: number, factionId: number) => {
     if (!apiKey) return;
     setFields(prev => prev.map(f => f.uid === uid ? { ...f, status: "loading" } : f));
@@ -127,7 +208,6 @@ export default function PiMarriageScout() {
               ? { ...f, status: "verified" as const, factionName: data.name, factionId }
               : f
           );
-          // Auto-add next empty field if this was the last
           const idx = updated.findIndex(f => f.uid === uid);
           if (idx === updated.length - 1) {
             updated.push({ uid: uidRef.current++, value: "", status: "idle" });
@@ -142,19 +222,14 @@ export default function PiMarriageScout() {
     }
   };
 
-  // ── Field updates ───────────────────────────────────────────────
   const updateField = (uid: number, value: string) => {
-    // Clear existing lookup timer
     const existing = lookupTimers.current.get(uid);
     if (existing) clearTimeout(existing);
-
     setFields(prev => prev.map(f =>
       f.uid === uid
         ? { ...f, value, status: "idle", factionName: undefined, factionId: undefined, errorMsg: undefined }
         : f
     ));
-
-    // Schedule lookup if input looks like a number
     if (value.trim() && /^\d+$/.test(value.trim())) {
       const timer = setTimeout(() => {
         lookupFaction(uid, parseInt(value.trim(), 10));
@@ -173,10 +248,13 @@ export default function PiMarriageScout() {
     });
   };
 
-  // ── Scan ────────────────────────────────────────────────────────
   const handleScan = () => {
     if (!canScan) return;
     scan(verifiedFields.map(f => f.factionId!).join(","));
+  };
+
+  const handleRescanFaction = (factionId: number) => {
+    scan(String(factionId));
   };
 
   const handleSort = (key: SortKey) => {
@@ -184,7 +262,8 @@ export default function PiMarriageScout() {
     else { setSortKey(key); setSortDir("asc"); }
   };
 
-  const sortedResults = sortResults(results, sortKey, sortDir);
+  const sortedResults = sortResults(displayedResults, sortKey, sortDir);
+  const showResults = displayedResults.length > 0 || phase === "done";
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -221,7 +300,6 @@ export default function PiMarriageScout() {
             </div>
           )}
 
-          {/* Dynamic ID fields */}
           <div className="space-y-3">
             <AnimatePresence initial={false}>
               {fields.map((field, i) => {
@@ -229,6 +307,7 @@ export default function PiMarriageScout() {
                 const isLastEmpty = i === fields.length - 1 && !field.value.trim();
                 const showRemove = !isOnly && !isLastEmpty;
                 const label = i === 0 ? "Faction ID" : "Next ID (optional)";
+                const cachedEntry = field.factionId ? cacheStore[field.factionId] : null;
 
                 return (
                   <motion.div
@@ -244,7 +323,6 @@ export default function PiMarriageScout() {
                         {label}
                       </label>
                       <div className="flex gap-2">
-                        {/* Input with status icon */}
                         <div className="relative flex-1">
                           <input
                             type="text"
@@ -267,20 +345,12 @@ export default function PiMarriageScout() {
                                   : "border-border/60 focus:border-primary/50 focus:ring-primary/30"
                             )}
                           />
-                          {/* Status icon */}
                           <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
-                            {field.status === "loading" && (
-                              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                            )}
-                            {field.status === "verified" && (
-                              <CheckCircle2 className="w-4 h-4 text-green-500" />
-                            )}
-                            {field.status === "error" && (
-                              <XCircle className="w-4 h-4 text-destructive" />
-                            )}
+                            {field.status === "loading" && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                            {field.status === "verified" && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                            {field.status === "error" && <XCircle className="w-4 h-4 text-destructive" />}
                           </div>
                         </div>
-                        {/* Remove button */}
                         {showRemove && (
                           <button
                             onClick={() => removeField(field.uid)}
@@ -293,7 +363,6 @@ export default function PiMarriageScout() {
                         )}
                       </div>
 
-                      {/* Faction name confirmation */}
                       <AnimatePresence>
                         {field.status === "verified" && field.factionName && (
                           <motion.div
@@ -301,11 +370,19 @@ export default function PiMarriageScout() {
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -4 }}
                             transition={{ duration: 0.15 }}
-                            className="flex items-center gap-1.5 pl-1 text-xs text-green-500"
+                            className="flex items-center gap-2 pl-1"
                           >
-                            <CheckCircle2 className="w-3 h-3 flex-shrink-0" />
-                            <span className="font-medium">{field.factionName}</span>
-                            <span className="text-green-500/50">[{field.factionId}]</span>
+                            <span className="flex items-center gap-1.5 text-xs text-green-500">
+                              <CheckCircle2 className="w-3 h-3 flex-shrink-0" />
+                              <span className="font-medium">{field.factionName}</span>
+                              <span className="text-green-500/50">[{field.factionId}]</span>
+                            </span>
+                            {cachedEntry && (
+                              <span className="flex items-center gap-1 text-[10px] text-muted-foreground/50">
+                                <Database className="w-2.5 h-2.5" />
+                                cached {formatAge(cachedEntry.scannedAt)}
+                              </span>
+                            )}
                           </motion.div>
                         )}
                         {field.status === "error" && field.errorMsg && (
@@ -328,7 +405,6 @@ export default function PiMarriageScout() {
             </AnimatePresence>
           </div>
 
-          {/* Hint */}
           <div className="flex items-start gap-2 pt-1">
             <Info className="w-3.5 h-3.5 text-muted-foreground/40 flex-shrink-0 mt-0.5" />
             <p className="text-[11px] text-muted-foreground/50 leading-relaxed">
@@ -340,7 +416,6 @@ export default function PiMarriageScout() {
             </p>
           </div>
 
-          {/* Verified summary + Scan button */}
           <AnimatePresence>
             {canScan && !isRunning && (
               <motion.div
@@ -384,6 +459,131 @@ export default function PiMarriageScout() {
         </CardContent>
       </Card>
 
+      {/* Saved Scans */}
+      <AnimatePresence>
+        {hasCached && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <Card className="bg-card">
+              <CardHeader className="p-4 pb-2">
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                    <Database className="w-3.5 h-3.5" />
+                    Saved Scans
+                    <span className="px-1.5 py-0.5 rounded-full bg-muted/60 text-muted-foreground font-black text-[10px]">
+                      {cachedFactions.length}
+                    </span>
+                  </CardTitle>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={checkAll}
+                      className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={uncheckAll}
+                      className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors"
+                    >
+                      None
+                    </button>
+                    <button
+                      onClick={handleClearAll}
+                      title="Clear all saved scans"
+                      className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors flex items-center gap-1"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      Clear All
+                    </button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 pt-2">
+                <div className="space-y-1">
+                  {cachedFactions.map(faction => {
+                    const isChecked = checkedIds.has(faction.factionId);
+                    const isRescanning = isRunning;
+                    return (
+                      <div
+                        key={faction.factionId}
+                        className={cn(
+                          "flex items-center gap-3 rounded-md px-3 py-2 transition-colors group",
+                          isChecked ? "bg-primary/5 border border-primary/15" : "border border-transparent hover:bg-muted/20"
+                        )}
+                      >
+                        {/* Checkbox */}
+                        <button
+                          onClick={() => toggleChecked(faction.factionId)}
+                          className={cn(
+                            "w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors",
+                            isChecked
+                              ? "bg-primary border-primary"
+                              : "border-border/60 hover:border-primary/50"
+                          )}
+                          aria-label={isChecked ? "Deselect" : "Select"}
+                        >
+                          {isChecked && (
+                            <svg className="w-2.5 h-2.5 text-primary-foreground" viewBox="0 0 10 10" fill="none">
+                              <path d="M1.5 5L4 7.5L8.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </button>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-sm font-medium truncate">{faction.factionName}</span>
+                            <span className="text-[11px] text-muted-foreground/50 font-mono flex-shrink-0">
+                              [{faction.factionId}]
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] text-muted-foreground/50">
+                              {faction.results.length} match{faction.results.length !== 1 ? "es" : ""}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground/30">·</span>
+                            <span className="text-[10px] text-muted-foreground/50">
+                              scanned {formatAge(faction.scannedAt)}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => handleRescanFaction(faction.factionId)}
+                            disabled={isRescanning}
+                            title="Rescan this faction"
+                            className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded border border-border/50 text-muted-foreground hover:text-foreground hover:border-border hover:bg-muted/40 transition-colors disabled:opacity-40"
+                          >
+                            <RefreshCw className="w-3 h-3" />
+                            Rescan
+                          </button>
+                          <button
+                            onClick={() => handleDeleteFaction(faction.factionId)}
+                            title="Remove from saved scans"
+                            className="w-7 h-7 flex items-center justify-center rounded border border-transparent text-muted-foreground/40 hover:text-destructive hover:border-destructive/30 hover:bg-destructive/10 transition-colors"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-muted-foreground/40 mt-3">
+                  Check factions to include their results below. Hover a row to rescan or remove it.
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Progress */}
       <AnimatePresence>
         {(isRunning || phase === "done") && total > 0 && (
@@ -421,21 +621,25 @@ export default function PiMarriageScout() {
       )}
 
       {/* Results */}
-      {(results.length > 0 || phase === "done") && (
+      {showResults && (
         <Card className="bg-card">
           <CardHeader className="p-4 pb-2">
             <div className="flex items-center justify-between gap-3">
               <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                 Results
-                {results.length > 0 && (
+                {displayedResults.length > 0 && (
                   <span className="px-2 py-0.5 rounded-full bg-primary/15 text-primary font-black text-xs">
-                    {results.length}
+                    {displayedResults.length}
+                  </span>
+                )}
+                {!isRunning && checkedIds.size > 0 && (
+                  <span className="text-[10px] font-normal text-muted-foreground/50 ml-1">
+                    {checkedIds.size} faction{checkedIds.size !== 1 ? "s" : ""} selected
                   </span>
                 )}
               </CardTitle>
-              {results.length > 0 && (
+              {displayedResults.length > 0 && (
                 <div className="flex items-center gap-2">
-                  {/* Copy for Sheets */}
                   <button
                     onClick={async () => {
                       await copyForSheets(sortedResults);
@@ -450,10 +654,9 @@ export default function PiMarriageScout() {
                       : <><Clipboard className="w-3 h-3" />Copy for Sheets</>
                     }
                   </button>
-                  {/* Download CSV */}
                   <button
                     onClick={() => downloadCSV(sortedResults)}
-                    title="Download as CSV — open directly in Google Sheets, Excel, or Numbers"
+                    title="Download as CSV"
                     className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded border border-border/50 text-muted-foreground hover:text-foreground hover:border-border hover:bg-muted/40 transition-colors"
                   >
                     <Download className="w-3 h-3" />
@@ -464,9 +667,13 @@ export default function PiMarriageScout() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            {results.length === 0 ? (
+            {displayedResults.length === 0 ? (
               <div className="text-center py-8 text-sm text-muted-foreground">
-                {phase === "done" ? "No matching members found." : "Scanning…"}
+                {isRunning
+                  ? "Scanning…"
+                  : checkedIds.size === 0
+                    ? "Select factions above to view their saved results."
+                    : "No matching members found in selected factions."}
               </div>
             ) : (
               <div className="overflow-x-auto">
