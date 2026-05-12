@@ -252,10 +252,10 @@ function AttackCell({
       <div className="flex flex-col items-end gap-1">
         <div className="flex items-center gap-1.5 px-2 py-1 rounded border border-muted/40 text-muted-foreground/40">
           <Lock className="w-3 h-3" />
-          <span className="text-[10px] font-bold uppercase tracking-wider">Too Strong</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider">Too Weak</span>
         </div>
         <span className="text-[10px] text-muted-foreground/35 text-right leading-tight max-w-[110px]">
-          You're {ratio.toFixed(0)}× stronger — little XP gain
+          They're {ratio.toFixed(0)}× weaker — little XP gain
         </span>
       </div>
     );
@@ -433,7 +433,7 @@ export default function LevelingTargets() {
           {lockedCount > 0 && (
             <span className="flex items-center gap-1 text-red-400/80 font-medium ml-auto">
               <Lock className="w-3 h-3" />
-              {lockedCount} {lockedCount === 1 ? "target" : "targets"} too weak for XP
+              {lockedCount} {lockedCount === 1 ? "target" : "targets"} too weak to fight
             </span>
           )}
         </div>
@@ -596,7 +596,7 @@ export default function LevelingTargets() {
             {lockedCount > 0 && (
               <span className="flex items-center gap-1 text-xs text-red-400/70 bg-red-400/5 border border-red-400/15 px-2 py-0.5 rounded-full">
                 <Lock className="w-3 h-3" />
-                {lockedCount} too strong
+                {lockedCount} too weak
               </span>
             )}
             {loadingCount > 0 && (
