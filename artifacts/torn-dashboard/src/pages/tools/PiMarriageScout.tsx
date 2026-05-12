@@ -1,15 +1,20 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useApiKey } from "@/hooks/use-api-key";
-import { usePiScout, parseFactionIds } from "@/hooks/use-pi-scout";
+import { usePiScout } from "@/hooks/use-pi-scout";
 import type { ScoutResult } from "@/hooks/use-pi-scout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, ExternalLink, ChevronUp, ChevronDown, AlertCircle, Search, X, Info } from "lucide-react";
+import {
+  Users, ExternalLink, ChevronUp, ChevronDown,
+  AlertCircle, Search, X, Info,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 type SortKey = "level" | "daysInFaction" | "name";
 type SortDir = "asc" | "desc";
+
+interface Field { uid: number; value: string }
 
 function formatDays(days: number): string {
   if (days >= 365) return `${(days / 365).toFixed(1)}y`;
@@ -36,7 +41,8 @@ function sortResults(results: ScoutResult[], key: SortKey, dir: SortDir) {
 
 export default function PiMarriageScout() {
   const { apiKey } = useApiKey();
-  const [input, setInput] = useState("");
+  const uidRef = useRef(1);
+  const [fields, setFields] = useState<Field[]>([{ uid: 0, value: "" }]);
   const [sortKey, setSortKey] = useState<SortKey>("level");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const { state, scan, cancel } = usePiScout(apiKey);
@@ -45,17 +51,39 @@ export default function PiMarriageScout() {
   const isRunning = phase === "fetching" || phase === "scanning";
   const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
 
+  const filledIds = fields.map(f => f.value.trim()).filter(v => /^\d+$/.test(v));
+  const canScan = filledIds.length > 0;
+
+  const updateField = (uid: number, value: string) => {
+    setFields(prev => {
+      const next = prev.map(f => f.uid === uid ? { ...f, value } : f);
+      const idx = next.findIndex(f => f.uid === uid);
+      const isLast = idx === next.length - 1;
+      if (isLast && value.trim() && /^\d+$/.test(value.trim())) {
+        next.push({ uid: uidRef.current++, value: "" });
+      }
+      return next;
+    });
+  };
+
+  const removeField = (uid: number) => {
+    setFields(prev => {
+      if (prev.length === 1) return [{ uid: uidRef.current++, value: "" }];
+      return prev.filter(f => f.uid !== uid);
+    });
+  };
+
+  const handleScan = () => {
+    if (!canScan) return;
+    scan(filledIds.join(","));
+  };
+
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir("asc"); }
   };
 
   const sortedResults = sortResults(results, sortKey, sortDir);
-
-  const handleScan = () => {
-    if (parseFactionIds(input).length === 0) return;
-    scan(input);
-  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -81,60 +109,103 @@ export default function PiMarriageScout() {
       <Card className="bg-card">
         <CardHeader className="p-4 pb-3">
           <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Faction IDs to Scan
+            Factions to Scan
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-4 pt-0 space-y-3">
+        <CardContent className="p-4 pt-0 space-y-4">
           {!apiKey && (
             <div className="flex items-center gap-2 text-sm text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-md px-3 py-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               Connect your API key in Settings before scanning.
             </div>
           )}
-          <div className="flex gap-3">
-            <input
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && !isRunning && apiKey) handleScan(); }}
-              placeholder="e.g. 7024, 7893, 12345"
-              disabled={isRunning}
-              className={cn(
-                "flex-1 bg-muted/40 border border-border/60 rounded-md px-3 py-2 text-sm font-mono",
-                "placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30",
-                "disabled:opacity-50"
-              )}
-            />
+
+          {/* Dynamic ID fields */}
+          <div className="space-y-2">
+            <AnimatePresence initial={false}>
+              {fields.map((field, i) => {
+                const isOnly = fields.length === 1;
+                const isEmpty = !field.value.trim();
+                const showRemove = !isOnly && !(i === fields.length - 1 && isEmpty);
+                const label = i === 0 ? "Faction ID" : "Next ID (optional)";
+
+                return (
+                  <motion.div
+                    key={field.uid}
+                    initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                    animate={{ opacity: 1, height: "auto", marginTop: i > 0 ? 8 : 0 }}
+                    exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                    transition={{ duration: 0.18, ease: "easeOut" }}
+                    style={{ overflow: "hidden" }}
+                  >
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                        {label}
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={field.value}
+                          onChange={e => updateField(field.uid, e.target.value)}
+                          onKeyDown={e => { if (e.key === "Enter" && !isRunning && apiKey && canScan) handleScan(); }}
+                          placeholder={i === 0 ? "e.g. 7024" : "Another faction ID…"}
+                          disabled={isRunning}
+                          className={cn(
+                            "flex-1 bg-muted/40 border border-border/60 rounded-md px-3 py-2 text-sm font-mono",
+                            "placeholder:text-muted-foreground/40 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30",
+                            "disabled:opacity-50 transition-colors"
+                          )}
+                        />
+                        {showRemove && (
+                          <button
+                            onClick={() => removeField(field.uid)}
+                            disabled={isRunning}
+                            title="Remove"
+                            className="w-9 h-9 flex items-center justify-center rounded-md border border-border/50 text-muted-foreground hover:text-destructive hover:border-destructive/40 hover:bg-destructive/10 transition-colors disabled:opacity-40"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+
+          {/* Scan / Cancel */}
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-start gap-2">
+              <Info className="w-3.5 h-3.5 text-muted-foreground/50 flex-shrink-0 mt-0.5" />
+              <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                Faction ID is in the URL:{" "}
+                <span className="font-mono bg-muted px-1 py-0.5 rounded text-[10px]">
+                  factions.php?step=profile&amp;<strong className="text-primary/80">ID=7024</strong>
+                </span>
+                {" "}— not your player ID.
+              </p>
+            </div>
             {isRunning ? (
               <Button
                 variant="outline"
                 onClick={cancel}
-                className="gap-2 border-destructive/40 text-destructive hover:bg-destructive/10"
+                className="ml-4 flex-shrink-0 gap-2 border-destructive/40 text-destructive hover:bg-destructive/10"
               >
                 <X className="w-4 h-4" />
                 Cancel
               </Button>
             ) : (
-              <Button onClick={handleScan} disabled={!apiKey || !input.trim()} className="gap-2">
+              <Button
+                onClick={handleScan}
+                disabled={!apiKey || !canScan}
+                className="ml-4 flex-shrink-0 gap-2"
+              >
                 <Search className="w-4 h-4" />
-                Scan
+                Scan{filledIds.length > 1 ? ` (${filledIds.length})` : ""}
               </Button>
             )}
-          </div>
-          {/* How to find the faction ID */}
-          <div className="flex items-start gap-2 rounded-md bg-muted/30 border border-border/40 px-3 py-2.5">
-            <Info className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0 mt-0.5" />
-            <div className="text-[11px] text-muted-foreground leading-relaxed space-y-0.5">
-              <p>
-                <strong className="text-foreground">Faction ID</strong> — the number in the faction profile URL:{" "}
-                <span className="font-mono bg-muted px-1 py-0.5 rounded text-[10px]">
-                  torn.com/factions.php?step=profile&amp;<strong className="text-primary">ID=7024</strong>
-                </span>
-              </p>
-              <p className="text-muted-foreground/60">
-                Not your player ID. Faction IDs are usually 4–5 digits. Separate multiple IDs with commas.
-              </p>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -169,9 +240,16 @@ export default function PiMarriageScout() {
 
       {/* Error */}
       {phase === "error" && error && (
-        <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          {error}
+        <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <div>
+            <p>{error}</p>
+            {error.toLowerCase().includes("incorrect id") && (
+              <p className="mt-1 text-xs text-destructive/70">
+                Make sure you're using the faction ID (from the faction profile URL), not a player ID.
+              </p>
+            )}
+          </div>
         </div>
       )}
 
