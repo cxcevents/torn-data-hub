@@ -4,7 +4,7 @@ import { usePiScout, parseFactionIds } from "@/hooks/use-pi-scout";
 import type { ScoutResult } from "@/hooks/use-pi-scout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, ExternalLink, ChevronUp, ChevronDown, AlertCircle, Search, X } from "lucide-react";
+import { Users, ExternalLink, ChevronUp, ChevronDown, AlertCircle, Search, X, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -121,9 +121,21 @@ export default function PiMarriageScout() {
               </Button>
             )}
           </div>
-          <p className="text-[11px] text-muted-foreground">
-            Separate multiple faction IDs with commas or spaces. Scanning respects API rate limits (~300ms per member).
-          </p>
+          {/* How to find the faction ID */}
+          <div className="flex items-start gap-2 rounded-md bg-muted/30 border border-border/40 px-3 py-2.5">
+            <Info className="w-3.5 h-3.5 text-muted-foreground/70 flex-shrink-0 mt-0.5" />
+            <div className="text-[11px] text-muted-foreground leading-relaxed space-y-0.5">
+              <p>
+                <strong className="text-foreground">Faction ID</strong> — the number in the faction profile URL:{" "}
+                <span className="font-mono bg-muted px-1 py-0.5 rounded text-[10px]">
+                  torn.com/factions.php?step=profile&amp;<strong className="text-primary">ID=7024</strong>
+                </span>
+              </p>
+              <p className="text-muted-foreground/60">
+                Not your player ID. Faction IDs are usually 4–5 digits. Separate multiple IDs with commas.
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
