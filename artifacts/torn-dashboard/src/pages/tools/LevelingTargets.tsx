@@ -14,14 +14,10 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const STORAGE_KEY = "leveling_targets_list";
 
-const LIST_LABELS: Record<string, string> = {
-  "Baldr's List 1": "List 1",
-  "Baldr's List 2": "List 2",
-  "Baldr's List 3": "List 3",
-  "Baldr's Extra List 1": "Extra 1",
-  "Baldr's Extra List 2": "Extra 2",
-  "Baldr's Extra List 3": "Extra 3",
-  "Baldr's DOMINO List": "DOMINO",
+const LAST_ACTION_PRIORITY: Record<string, number> = {
+  Online: 0,
+  Idle: 1,
+  Offline: 2,
 };
 
 const STATUS_PRIORITY: Record<TargetStatus, number> = {
@@ -34,57 +30,48 @@ const STATUS_PRIORITY: Record<TargetStatus, number> = {
   loading: 6,
 };
 
-function formatBattleStat(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return String(n);
-}
+type SortKey = "name" | "level" | "status";
+type SortDir = "asc" | "desc";
 
-function formatCountdown(untilSeconds: number, nowMs: number): string {
-  const diffMs = untilSeconds * 1000 - nowMs;
-  if (diffMs <= 0) return "Out soon";
-  const totalMins = Math.ceil(diffMs / 60000);
-  const h = Math.floor(totalMins / 60);
-  const m = totalMins % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
-
-function autoSort(targets: LevelingTarget[], nowMs: number): LevelingTarget[] {
+function autoSort(targets: LevelingTarget[]): LevelingTarget[] {
   return [...targets].sort((a, b) => {
     const ap = STATUS_PRIORITY[a.statusState] ?? 6;
     const bp = STATUS_PRIORITY[b.statusState] ?? 6;
     if (ap !== bp) return ap - bp;
+
+    // Within attackable: Online > Idle > Offline
     if (a.statusState === "Okay" && b.statusState === "Okay") {
-      return a.totalStats - b.totalStats;
+      const ala = LAST_ACTION_PRIORITY[a.lastActionStatus] ?? 3;
+      const bla = LAST_ACTION_PRIORITY[b.lastActionStatus] ?? 3;
+      return ala - bla;
     }
+
+    // Within hospital: soonest release first
     if (a.statusState === "Hospital" && b.statusState === "Hospital") {
       return a.statusUntil - b.statusUntil;
     }
+
     return 0;
   });
 }
 
-type SortKey = "level" | "totalStats" | "name" | "status";
-type SortDir = "asc" | "desc";
-
-function manualSort(
-  targets: LevelingTarget[],
-  key: SortKey,
-  dir: SortDir,
-  nowMs: number,
-): LevelingTarget[] {
+function manualSort(targets: LevelingTarget[], key: SortKey, dir: SortDir): LevelingTarget[] {
   return [...targets].sort((a, b) => {
     let cmp = 0;
-    if (key === "level") cmp = a.level - b.level;
-    else if (key === "totalStats") cmp = a.totalStats - b.totalStats;
-    else if (key === "name") cmp = a.name.localeCompare(b.name);
+    if (key === "name") cmp = a.name.localeCompare(b.name);
+    else if (key === "level") cmp = a.level - b.level;
     else {
       const ap = STATUS_PRIORITY[a.statusState] ?? 6;
       const bp = STATUS_PRIORITY[b.statusState] ?? 6;
       cmp = ap - bp;
-      if (cmp === 0 && a.statusState === "Hospital") cmp = a.statusUntil - b.statusUntil;
-      if (cmp === 0 && a.statusState === "Okay") cmp = a.totalStats - b.totalStats;
+      if (cmp === 0 && a.statusState === "Okay") {
+        const ala = LAST_ACTION_PRIORITY[a.lastActionStatus] ?? 3;
+        const bla = LAST_ACTION_PRIORITY[b.lastActionStatus] ?? 3;
+        cmp = ala - bla;
+      }
+      if (cmp === 0 && a.statusState === "Hospital") {
+        cmp = a.statusUntil - b.statusUntil;
+      }
     }
     return dir === "asc" ? cmp : -cmp;
   });
@@ -97,7 +84,17 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
     : <ChevronDown className="w-3 h-3 text-primary" />;
 }
 
-function StatusBadge({ target, nowMs }: { target: LevelingTarget; nowMs: number }) {
+function formatCountdown(untilSeconds: number, nowMs: number): string {
+  const diffMs = untilSeconds * 1000 - nowMs;
+  if (diffMs <= 0) return "Out soon";
+  const totalMins = Math.ceil(diffMs / 60000);
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function StatusCell({ target, nowMs }: { target: LevelingTarget; nowMs: number }) {
   if (target.statusState === "loading") {
     return (
       <span className="flex items-center gap-1.5 text-muted-foreground/40 text-xs">
@@ -134,14 +131,22 @@ function StatusBadge({ target, nowMs }: { target: LevelingTarget; nowMs: number 
   );
 }
 
-function LastActionDot({ status }: { status: string }) {
-  const cls =
-    status === "Online"
+function LastActionCell({ target }: { target: LevelingTarget }) {
+  if (!target.lastActionRelative) {
+    return <span className="text-xs text-muted-foreground/25">—</span>;
+  }
+  const dotCls =
+    target.lastActionStatus === "Online"
       ? "bg-green-400"
-      : status === "Idle"
+      : target.lastActionStatus === "Idle"
       ? "bg-amber-400"
       : "bg-muted-foreground/25";
-  return <span className={cn("w-1.5 h-1.5 rounded-full inline-block flex-shrink-0", cls)} />;
+  return (
+    <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", dotCls)} />
+      {target.lastActionRelative}
+    </span>
+  );
 }
 
 export default function LevelingTargets() {
@@ -165,14 +170,17 @@ export default function LevelingTargets() {
     return () => clearInterval(id);
   }, []);
 
-  const handleSelectList = useCallback((name: string) => {
-    setSelectedList(name);
-    localStorage.setItem(STORAGE_KEY, name);
-    reset();
-    setUserSorted(false);
-    setSortKey("status");
-    setSortDir("asc");
-  }, [reset]);
+  const handleSelectList = useCallback(
+    (name: string) => {
+      setSelectedList(name);
+      localStorage.setItem(STORAGE_KEY, name);
+      reset();
+      setUserSorted(false);
+      setSortKey("status");
+      setSortDir("asc");
+    },
+    [reset],
+  );
 
   const handleFetch = () => {
     if (!apiKey || isRunning) return;
@@ -192,15 +200,15 @@ export default function LevelingTargets() {
     targets.length === 0
       ? []
       : userSorted
-      ? manualSort(targets, sortKey, sortDir, nowMs)
-      : autoSort(targets, nowMs);
+      ? manualSort(targets, sortKey, sortDir)
+      : autoSort(targets);
 
   const attackableCount = targets.filter((t) => t.statusState === "Okay").length;
   const hospitalCount = targets.filter((t) => t.statusState === "Hospital").length;
   const loadingCount = targets.filter((t) => t.statusState === "loading").length;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div>
         <div className="flex items-center gap-3 mb-1">
@@ -222,7 +230,7 @@ export default function LevelingTargets() {
           >
             Baldr's levelling lists
           </a>
-          . Live hospital status fetched via your API key.
+          . Live status fetched via your API key — attackable targets surface to the top.
         </p>
       </div>
 
@@ -237,24 +245,24 @@ export default function LevelingTargets() {
           {!apiKey && (
             <div className="flex items-center gap-2 text-sm text-amber-400 bg-amber-400/10 border border-amber-400/20 rounded-md px-3 py-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              Connect your API key in Settings to check live status.
+              Connect your API key in Settings before fetching targets.
             </div>
           )}
 
-          <div className="flex flex-wrap gap-2">
-            {LIST_NAMES.map((name) => (
+          <div className="flex gap-2">
+            {LIST_NAMES.map((name, i) => (
               <button
                 key={name}
                 disabled={isRunning}
                 onClick={() => handleSelectList(name)}
                 className={cn(
-                  "px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider border transition-colors disabled:opacity-50",
+                  "px-4 py-2 rounded-md text-sm font-bold border transition-colors disabled:opacity-50",
                   selectedList === name
                     ? "bg-primary/20 border-primary/40 text-primary"
                     : "bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/60",
                 )}
               >
-                {LIST_LABELS[name] ?? name}
+                List {i + 1}
               </button>
             ))}
           </div>
@@ -376,7 +384,7 @@ export default function LevelingTargets() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border/40 bg-muted/20">
-                      <th className="px-4 py-2.5 text-left w-[200px]">
+                      <th className="px-4 py-2.5 text-left">
                         <button
                           onClick={() => handleSort("name")}
                           className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
@@ -392,15 +400,6 @@ export default function LevelingTargets() {
                         >
                           Lvl
                           <SortIcon active={sortKey === "level"} dir={sortDir} />
-                        </button>
-                      </th>
-                      <th className="px-4 py-2.5 text-left">
-                        <button
-                          onClick={() => handleSort("totalStats")}
-                          className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          Stats
-                          <SortIcon active={sortKey === "totalStats"} dir={sortDir} />
                         </button>
                       </th>
                       <th className="px-4 py-2.5 text-left">
@@ -427,7 +426,8 @@ export default function LevelingTargets() {
                         className={cn(
                           "border-b border-border/20 transition-colors hover:bg-muted/10",
                           i % 2 !== 0 && "bg-muted/[0.04]",
-                          target.statusState === "Okay" && "bg-green-950/20 hover:bg-green-950/30",
+                          target.statusState === "Okay" &&
+                            "border-l-2 border-l-green-500/40 bg-green-950/15 hover:bg-green-950/25",
                         )}
                       >
                         {/* Player */}
@@ -436,51 +436,43 @@ export default function LevelingTargets() {
                             href={`https://www.torn.com/profiles.php?XID=${target.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1.5 font-medium text-foreground/85 hover:text-primary transition-colors group max-w-[180px]"
+                            className="flex items-center gap-1.5 font-medium text-foreground/85 hover:text-primary transition-colors group"
                           >
-                            <span className="truncate">{target.name}</span>
+                            <span className="truncate max-w-[160px]">
+                              {target.name === String(target.id) ? (
+                                <span className="font-mono text-muted-foreground/50">
+                                  #{target.id}
+                                </span>
+                              ) : (
+                                target.name
+                              )}
+                            </span>
                             <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-40 transition-opacity flex-shrink-0" />
                           </a>
-                          <span className="text-[10px] text-muted-foreground/35 font-mono">
-                            #{target.id}
-                          </span>
+                          {target.name !== String(target.id) && (
+                            <span className="text-[10px] text-muted-foreground/35 font-mono">
+                              #{target.id}
+                            </span>
+                          )}
                         </td>
 
                         {/* Level */}
                         <td className="px-4 py-3">
                           <span className="font-mono font-bold text-foreground/75 tabular-nums">
-                            {target.level}
+                            {target.level > 0 ? target.level : (
+                              <span className="text-muted-foreground/30">—</span>
+                            )}
                           </span>
-                        </td>
-
-                        {/* Stats */}
-                        <td className="px-4 py-3">
-                          <span className="font-mono font-bold text-foreground/80 tabular-nums">
-                            {formatBattleStat(target.totalStats)}
-                          </span>
-                          <div className="text-[10px] text-muted-foreground/35 font-mono mt-0.5 flex gap-1.5 tabular-nums">
-                            <span title="Strength">S:{formatBattleStat(target.str)}</span>
-                            <span title="Defense">D:{formatBattleStat(target.def)}</span>
-                            <span title="Speed">Sp:{formatBattleStat(target.spd)}</span>
-                            <span title="Dexterity">Dx:{formatBattleStat(target.dex)}</span>
-                          </div>
                         </td>
 
                         {/* Status */}
                         <td className="px-4 py-3">
-                          <StatusBadge target={target} nowMs={nowMs} />
+                          <StatusCell target={target} nowMs={nowMs} />
                         </td>
 
                         {/* Last Action */}
                         <td className="px-4 py-3">
-                          {target.lastActionRelative ? (
-                            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              <LastActionDot status={target.lastActionStatus} />
-                              {target.lastActionRelative}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground/25">—</span>
-                          )}
+                          <LastActionCell target={target} />
                         </td>
 
                         {/* Attack */}
@@ -511,7 +503,7 @@ export default function LevelingTargets() {
               {phase === "done" && (
                 <div className="px-4 py-2 border-t border-border/20 bg-muted/10">
                   <p className="text-[10px] text-muted-foreground/35">
-                    Status loaded on fetch — use Refresh Status to update. Countdown ticks every 30s. Source:{" "}
+                    Fetch again to refresh status. Countdowns update every 30s. Data:{" "}
                     <a
                       href="https://github.com/OranWeb/tc-baldrs-levelling-list"
                       target="_blank"
@@ -539,7 +531,7 @@ export default function LevelingTargets() {
               Select a list and fetch targets
             </p>
             <p className="text-xs text-muted-foreground/35 mt-0.5">
-              Stats pre-loaded from Baldr's list. Live status fetched from the Torn API.
+              Attackable players are sorted to the top automatically.
             </p>
           </div>
         </div>

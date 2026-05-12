@@ -1,23 +1,24 @@
 import { useState, useRef, useCallback } from "react";
-import FALLBACK_DATA from "@/lib/baldr-data.json";
+import { LIST_1_FALLBACK_IDS } from "@/lib/baldr-lists";
 
 const DATA_URL =
   "https://raw.githubusercontent.com/OranWeb/tc-baldrs-levelling-list/master/data.json";
 
+export const LIST_NAMES = [
+  "Baldr's List 1",
+  "Baldr's List 2",
+  "Baldr's List 3",
+] as const;
+
+export type ListName = (typeof LIST_NAMES)[number];
+
 interface BaldrEntry {
-  name: string;
-  id: string;
-  lvl: string;
-  total: string;
-  str: string;
-  def: string;
-  spd: string;
-  dex: string;
+  name?: string;
+  id: string | number;
+  lvl?: string;
 }
 
-type BaldrData = Record<string, BaldrEntry[]>;
-
-export const LIST_NAMES = Object.keys(FALLBACK_DATA) as string[];
+type BaldrData = Record<string, (number | BaldrEntry)[]>;
 
 export type TargetStatus =
   | "loading"
@@ -32,11 +33,6 @@ export interface LevelingTarget {
   id: number;
   name: string;
   level: number;
-  totalStats: number;
-  str: number;
-  def: number;
-  spd: number;
-  dex: number;
   statusState: TargetStatus;
   statusUntil: number;
   statusDescription: string;
@@ -62,24 +58,20 @@ const INITIAL: LevelingState = {
   error: null,
 };
 
-function parseStatNum(s: string): number {
-  return parseInt(s.replace(/,/g, ""), 10) || 0;
-}
-
 function sleep(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
 }
 
-function entryToTarget(e: BaldrEntry): LevelingTarget {
+function extractId(entry: number | BaldrEntry): number {
+  if (typeof entry === "number") return entry;
+  return parseInt(String(entry.id), 10);
+}
+
+function makeLoadingTarget(id: number): LevelingTarget {
   return {
-    id: parseInt(e.id, 10),
-    name: e.name,
-    level: parseInt(e.lvl, 10) || 0,
-    totalStats: parseStatNum(e.total),
-    str: parseStatNum(e.str),
-    def: parseStatNum(e.def),
-    spd: parseStatNum(e.spd),
-    dex: parseStatNum(e.dex),
+    id,
+    name: String(id),
+    level: 0,
     statusState: "loading",
     statusUntil: 0,
     statusDescription: "",
@@ -110,17 +102,16 @@ export function useLevelingTargets(apiKey: string | null) {
       setState({ phase: "loading", total: 0, checked: 0, targets: [], error: null });
 
       try {
+        // Load data.json — fall back to hardcoded List 1 IDs
         let data = dataRef.current;
         if (!data) {
           try {
             const res = await fetch(DATA_URL);
             if (res.ok) {
               data = (await res.json()) as BaldrData;
-            } else {
-              data = FALLBACK_DATA as unknown as BaldrData;
             }
           } catch {
-            data = FALLBACK_DATA as unknown as BaldrData;
+            // network error — use fallback below
           }
           dataRef.current = data;
         }
@@ -130,17 +121,27 @@ export function useLevelingTargets(apiKey: string | null) {
           return;
         }
 
-        const entries: BaldrEntry[] = data[listName] ?? [];
-        if (entries.length === 0) {
+        let rawEntries: (number | BaldrEntry)[];
+        if (data && data[listName] && data[listName].length > 0) {
+          rawEntries = data[listName];
+        } else if (listName === "Baldr's List 1") {
+          rawEntries = LIST_1_FALLBACK_IDS;
+        } else {
           setState((s) => ({
             ...s,
             phase: "error",
-            error: `No players found in "${listName}".`,
+            error: `Could not load "${listName}" — try again or check your connection.`,
           }));
           return;
         }
 
-        const targets: LevelingTarget[] = entries.map(entryToTarget);
+        const ids = rawEntries.map(extractId).filter((n) => n > 0 && isFinite(n));
+        if (ids.length === 0) {
+          setState((s) => ({ ...s, phase: "error", error: "No valid player IDs found." }));
+          return;
+        }
+
+        const targets: LevelingTarget[] = ids.map(makeLoadingTarget);
         setState({
           phase: "fetching",
           total: targets.length,
@@ -157,13 +158,15 @@ export function useLevelingTargets(apiKey: string | null) {
 
           try {
             const res = await fetch(
-              `https://api.torn.com/user/${targets[i].id}?selections=profile&key=${apiKey}`
+              `https://api.torn.com/user/${targets[i].id}?selections=profile&key=${apiKey}`,
             );
             const profile = await res.json();
 
             if (!profile.error) {
               targets[i] = {
                 ...targets[i],
+                name: profile.name ?? String(targets[i].id),
+                level: profile.level ?? 0,
                 statusState: (profile.status?.state as TargetStatus) ?? "Okay",
                 statusUntil: profile.status?.until ?? 0,
                 statusDescription: profile.status?.description ?? "",
@@ -186,7 +189,7 @@ export function useLevelingTargets(apiKey: string | null) {
         setState((s) => ({ ...s, phase: "error", error: msg }));
       }
     },
-    [apiKey]
+    [apiKey],
   );
 
   return { state, fetchList, cancel, reset };
