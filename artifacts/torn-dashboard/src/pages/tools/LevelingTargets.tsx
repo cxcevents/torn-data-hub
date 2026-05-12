@@ -304,6 +304,7 @@ export default function LevelingTargets() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [userSorted, setUserSorted] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
 
   const isRunning = phase === "loading" || phase === "fetching";
   const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
@@ -378,7 +379,16 @@ export default function LevelingTargets() {
     else { setSortKey(key); setSortDir("asc"); }
   };
 
-  const displayedTargets =
+  const toggleCategory = (cat: string) => {
+    setHiddenCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  };
+
+  const sortedTargets =
     targets.length === 0
       ? []
       : userSorted
@@ -392,6 +402,16 @@ export default function LevelingTargets() {
     if (!userEffTotal || !t.targetTotal) return false;
     return userEffTotal / t.targetTotal >= RATIO_LOCK;
   }).length;
+
+  const displayedTargets = sortedTargets.filter((t) => {
+    if (hiddenCategories.has("hospital") && t.statusState === "Hospital") return false;
+    if (hiddenCategories.has("attackable") && t.statusState === "Okay") return false;
+    if (hiddenCategories.has("tooWeak")) {
+      const ratio = userEffTotal > 0 && t.targetTotal > 0 ? userEffTotal / t.targetTotal : null;
+      if (ratio !== null && ratio >= RATIO_LOCK) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -581,29 +601,63 @@ export default function LevelingTargets() {
             className="flex flex-wrap items-center gap-2"
           >
             <span className="text-xs text-muted-foreground/50 font-medium uppercase tracking-wider">
-              {targets.length} targets
+              {displayedTargets.length !== targets.length
+                ? `${displayedTargets.length} / ${targets.length} targets`
+                : `${targets.length} targets`}
             </span>
             {attackableCount > 0 && (
-              <span className="text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/20 px-2 py-0.5 rounded-full">
+              <button
+                onClick={() => toggleCategory("attackable")}
+                className={cn(
+                  "text-xs font-bold px-2 py-0.5 rounded-full border transition-colors",
+                  hiddenCategories.has("attackable")
+                    ? "text-green-400/30 bg-green-400/5 border-green-400/10 line-through"
+                    : "text-green-400 bg-green-400/10 border-green-400/20 hover:bg-green-400/20",
+                )}
+              >
                 {attackableCount} attackable
-              </span>
+              </button>
             )}
             {hospitalCount > 0 && (
-              <span className="text-xs font-medium text-red-400 bg-red-400/10 border border-red-400/20 px-2 py-0.5 rounded-full">
+              <button
+                onClick={() => toggleCategory("hospital")}
+                className={cn(
+                  "text-xs font-medium px-2 py-0.5 rounded-full border transition-colors",
+                  hiddenCategories.has("hospital")
+                    ? "text-red-400/30 bg-red-400/5 border-red-400/10 line-through"
+                    : "text-red-400 bg-red-400/10 border-red-400/20 hover:bg-red-400/20",
+                )}
+              >
                 {hospitalCount} in hospital
-              </span>
+              </button>
             )}
             {lockedCount > 0 && (
-              <span className="flex items-center gap-1 text-xs text-red-400/70 bg-red-400/5 border border-red-400/15 px-2 py-0.5 rounded-full">
-                <Lock className="w-3 h-3" />
+              <button
+                onClick={() => toggleCategory("tooWeak")}
+                className={cn(
+                  "flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors",
+                  hiddenCategories.has("tooWeak")
+                    ? "text-red-400/30 bg-red-400/5 border-red-400/10 line-through"
+                    : "text-red-400/70 bg-red-400/5 border-red-400/15 hover:bg-red-400/10",
+                )}
+              >
+                <Lock className="w-3 h-3 flex-shrink-0" />
                 {lockedCount} too weak
-              </span>
+              </button>
             )}
             {loadingCount > 0 && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground/40">
                 <Loader2 className="w-3 h-3 animate-spin" />
                 {loadingCount} checking
               </span>
+            )}
+            {hiddenCategories.size > 0 && (
+              <button
+                onClick={() => setHiddenCategories(new Set())}
+                className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors ml-1"
+              >
+                Show all
+              </button>
             )}
           </motion.div>
         )}
