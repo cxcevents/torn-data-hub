@@ -3,7 +3,7 @@ import { useApiKey } from "@/hooks/use-api-key";
 import { useTornUser } from "@/hooks/use-torn-user";
 import { useEnhancerActivations } from "@/hooks/use-enhancer-activations";
 import { useLevelingTargets, LIST_NAMES } from "@/hooks/use-leveling-targets";
-import type { LevelingTarget, TargetStatus } from "@/hooks/use-leveling-targets";
+import type { LevelingTarget, TargetStatus, ListName } from "@/hooks/use-leveling-targets";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
-const STORAGE_KEY = "leveling_targets_list";
+const STORAGE_KEY = "leveling_targets_lists_v2";
 
 // Ratio thresholds: userEffTotal / targetTotal
 const RATIO_LOCK = 5;   // >= 5× → block attack
@@ -281,16 +281,25 @@ function AttackCell({
 
 // ── Main component ───────────────────────────────────────────────────────────
 
+function loadSavedLists(): string[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed as string[];
+    }
+  } catch {}
+  return [LIST_NAMES[0]];
+}
+
 export default function LevelingTargets() {
   const { apiKey } = useApiKey();
   const { data: userData } = useTornUser(apiKey);
   const { computeBonus } = useEnhancerActivations();
-  const { state, fetchList, cancel, reset } = useLevelingTargets(apiKey);
+  const { state, fetchLists, cancel, reset } = useLevelingTargets(apiKey);
   const { phase, total, checked, targets, error } = state;
 
-  const [selectedList, setSelectedList] = useState<string>(
-    () => localStorage.getItem(STORAGE_KEY) ?? LIST_NAMES[0],
-  );
+  const [selectedLists, setSelectedLists] = useState<string[]>(loadSavedLists);
   const [sortKey, setSortKey] = useState<SortKey>("status");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [userSorted, setUserSorted] = useState(false);
@@ -315,24 +324,52 @@ export default function LevelingTargets() {
   const userEffDex = Math.round((userData?.dexterity ?? 0) * (1 + ((userData?.dexterity_modifier ?? 0) + enhBonus.dexterity) / 100));
   const userEffTotal = userEffStr + userEffDef + userEffSpd + userEffDex;
 
-  const handleSelectList = useCallback(
+  const toggleList = useCallback(
     (name: string) => {
-      setSelectedList(name);
-      localStorage.setItem(STORAGE_KEY, name);
+      if (isRunning) return;
+      setSelectedLists((prev) => {
+        const next = prev.includes(name)
+          ? prev.length > 1 ? prev.filter((n) => n !== name) : prev // keep at least one
+          : [...prev, name];
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
+        return next;
+      });
       reset();
       setUserSorted(false);
       setSortKey("status");
       setSortDir("asc");
     },
-    [reset],
+    [isRunning, reset],
   );
 
-  const handleFetch = () => {
-    if (!apiKey || isRunning) return;
+  const selectAll = useCallback(() => {
+    if (isRunning) return;
+    const all = [...LIST_NAMES];
+    setSelectedLists(all);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(all)); } catch {}
+    reset();
     setUserSorted(false);
     setSortKey("status");
     setSortDir("asc");
-    fetchList(selectedList);
+  }, [isRunning, reset]);
+
+  const clearAll = useCallback(() => {
+    if (isRunning) return;
+    const first = [LIST_NAMES[0]];
+    setSelectedLists(first);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(first)); } catch {}
+    reset();
+    setUserSorted(false);
+    setSortKey("status");
+    setSortDir("asc");
+  }, [isRunning, reset]);
+
+  const handleFetch = () => {
+    if (!apiKey || isRunning || selectedLists.length === 0) return;
+    setUserSorted(false);
+    setSortKey("status");
+    setSortDir("asc");
+    fetchLists(selectedLists);
   };
 
   const handleSort = (key: SortKey) => {
@@ -405,9 +442,28 @@ export default function LevelingTargets() {
       {/* Controls */}
       <Card className="bg-card">
         <CardHeader className="p-4 pb-3">
-          <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Select List
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Select Lists
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={selectAll}
+                disabled={isRunning || selectedLists.length === LIST_NAMES.length}
+                className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 hover:text-primary transition-colors disabled:opacity-30"
+              >
+                All
+              </button>
+              <span className="text-muted-foreground/30 text-[10px]">/</span>
+              <button
+                onClick={clearAll}
+                disabled={isRunning || selectedLists.length === 1}
+                className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 hover:text-primary transition-colors disabled:opacity-30"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-4 pt-0 space-y-4">
           {!apiKey && (
@@ -417,23 +473,38 @@ export default function LevelingTargets() {
             </div>
           )}
 
-          <div className="flex gap-2">
-            {LIST_NAMES.map((name, i) => (
-              <button
-                key={name}
-                disabled={isRunning}
-                onClick={() => handleSelectList(name)}
-                className={cn(
-                  "px-4 py-2 rounded-md text-sm font-bold border transition-colors disabled:opacity-50",
-                  selectedList === name
-                    ? "bg-primary/20 border-primary/40 text-primary"
-                    : "bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/60",
-                )}
-              >
-                List {i + 1}
-              </button>
-            ))}
+          <div className="flex flex-wrap gap-2">
+            {LIST_NAMES.map((name) => {
+              const active = selectedLists.includes(name);
+              const shortName = name
+                .replace("Baldr's ", "")
+                .replace("List ", "L")
+                .replace("Extra List ", "X")
+                .replace("DOMINO List", "DOMINO");
+              return (
+                <button
+                  key={name}
+                  disabled={isRunning || (active && selectedLists.length === 1)}
+                  onClick={() => toggleList(name)}
+                  title={name}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md text-xs font-bold border transition-colors disabled:cursor-not-allowed",
+                    active
+                      ? "bg-primary/20 border-primary/40 text-primary"
+                      : "bg-muted/30 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/60",
+                    active && selectedLists.length === 1 && "opacity-60",
+                  )}
+                >
+                  {shortName}
+                </button>
+              );
+            })}
           </div>
+          {selectedLists.length > 1 && (
+            <p className="text-[10px] text-muted-foreground/40">
+              {selectedLists.length} lists selected — duplicate players will be fetched once.
+            </p>
+          )}
 
           <div className="flex items-center gap-3">
             <AnimatePresence mode="wait">

@@ -8,6 +8,10 @@ export const LIST_NAMES = [
   "Baldr's List 1",
   "Baldr's List 2",
   "Baldr's List 3",
+  "Baldr's Extra List 1",
+  "Baldr's Extra List 2",
+  "Baldr's Extra List 3",
+  "Baldr's DOMINO List",
 ] as const;
 
 export type ListName = (typeof LIST_NAMES)[number];
@@ -124,9 +128,9 @@ export function useLevelingTargets(apiKey: string | null) {
     setState(INITIAL);
   }, []);
 
-  const fetchList = useCallback(
-    async (listName: string) => {
-      if (!apiKey) return;
+  const fetchLists = useCallback(
+    async (listNames: string[]) => {
+      if (!apiKey || listNames.length === 0) return;
 
       cancelledRef.current = false;
       setState({ phase: "loading", total: 0, checked: 0, targets: [], error: null });
@@ -150,31 +154,35 @@ export function useLevelingTargets(apiKey: string | null) {
           return;
         }
 
-        let rawEntries: (number | BaldrEntry)[];
-        if (data && data[listName] && data[listName].length > 0) {
-          rawEntries = data[listName];
-        } else if (listName === "Baldr's List 1") {
-          rawEntries = LIST_1_FALLBACK_IDS;
-        } else {
+        // Merge entries from all selected lists, deduplicating by ID (first wins)
+        const seen = new Map<number, number | BaldrEntry>();
+        for (const listName of listNames) {
+          let entries: (number | BaldrEntry)[];
+          if (data && data[listName] && data[listName].length > 0) {
+            entries = data[listName];
+          } else if (listName === "Baldr's List 1") {
+            entries = LIST_1_FALLBACK_IDS;
+          } else {
+            continue; // skip unavailable lists silently when fetching multiple
+          }
+          for (const entry of entries) {
+            const id = extractId(entry);
+            if (id > 0 && isFinite(id) && !seen.has(id)) {
+              seen.set(id, entry);
+            }
+          }
+        }
+
+        if (seen.size === 0) {
           setState((s) => ({
             ...s,
             phase: "error",
-            error: `Could not load "${listName}" — try again or check your connection.`,
+            error: "Could not load selected lists — try again or check your connection.",
           }));
           return;
         }
 
-        const validEntries = rawEntries.filter((e) => {
-          const id = extractId(e);
-          return id > 0 && isFinite(id);
-        });
-
-        if (validEntries.length === 0) {
-          setState((s) => ({ ...s, phase: "error", error: "No valid player IDs found." }));
-          return;
-        }
-
-        const targets: LevelingTarget[] = validEntries.map(makeLoadingTarget);
+        const targets: LevelingTarget[] = Array.from(seen.values()).map(makeLoadingTarget);
         setState({
           phase: "fetching",
           total: targets.length,
@@ -227,5 +235,5 @@ export function useLevelingTargets(apiKey: string | null) {
     [apiKey],
   );
 
-  return { state, fetchList, cancel, reset };
+  return { state, fetchLists, cancel, reset };
 }
