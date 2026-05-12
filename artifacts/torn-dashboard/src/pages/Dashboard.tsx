@@ -786,7 +786,7 @@ export default function Dashboard() {
           <div className="flex justify-between text-center gap-2">
             {[
               { href: "https://www.torn.com/awards.php", value: data.awards || 0, label: "Awards" },
-              { href: "https://www.torn.com/medals.php", value: medalsCount, label: "Medals" },
+              { href: "https://www.torn.com/page.php?sid=awards&tab=medals", value: medalsCount, label: "Medals" },
               { href: "https://www.torn.com/merits.php", value: meritCount, label: "Merits" },
               { href: "https://www.torn.com/perks.php", value: perksCount, label: "Perks" },
             ].map(({ href, value, label }) => (
