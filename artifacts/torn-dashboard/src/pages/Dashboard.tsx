@@ -481,8 +481,10 @@ export default function Dashboard() {
   }
 
   // Derived Data
-  const meritCount = data.personalstats?.meritsbought
-    ?? (data.merits ? Object.values(data.merits as Record<string, number>).reduce((s, v) => s + v, 0) : 0);
+  const meritsUsed = data.merits
+    ? Object.values(data.merits as Record<string, number>).reduce((s, v) => s + v, 0)
+    : 0;
+  const meritCount = meritsUsed;
   const perksCount = ["job_perks", "education_perks", "faction_perks", "property_perks", "stock_perks", "merit_perks", "other_perks"]
     .reduce((acc, key) => acc + (Array.isArray(data[key]) ? (data[key] as string[]).length : 0), 0)
     || (data.perks ? Object.values(data.perks).reduce((acc: number, curr: any) => acc + (Array.isArray(curr) ? curr.length : 0), 0) : 0);
