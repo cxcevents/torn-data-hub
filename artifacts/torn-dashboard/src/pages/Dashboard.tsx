@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useApiKey } from "@/hooks/use-api-key";
+import { useSettings } from "@/hooks/use-settings";
 import { useTornUser } from "@/hooks/use-torn-user";
 import { useFaction } from "@/hooks/use-faction";
 import { ActiveEnhancers } from "@/components/active-enhancers";
@@ -405,6 +406,7 @@ function formatAge(days: number, expanded: boolean): string {
 
 export default function Dashboard() {
   const { apiKey } = useApiKey();
+  const { settings } = useSettings();
   const { data, isLoading, error, isFetching } = useTornUser(apiKey);
   const { data: factionData } = useFaction(apiKey, data?.faction?.faction_id);
   const { computeBonus } = useEnhancerActivations();
@@ -919,8 +921,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 2. ACTIVE ENHANCERS */}
-      <ActiveEnhancers />
+      {/* 2. ACTIVE ENHANCERS — hidden until "Show WIP features" is enabled in Settings */}
+      {settings.showWipFeatures && <ActiveEnhancers />}
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <SortableContext items={order} strategy={rectSortingStrategy}>
