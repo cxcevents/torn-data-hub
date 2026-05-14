@@ -17,7 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
-type SortKey = "level" | "daysInFaction" | "name";
+type SortKey = "level" | "daysInFaction" | "name" | "lastAction";
 type SortDir = "asc" | "desc";
 type FieldStatus = "idle" | "loading" | "verified" | "error";
 
@@ -48,6 +48,7 @@ function sortResults(results: ScoutResult[], key: SortKey, dir: SortDir) {
     let cmp = 0;
     if (key === "level") cmp = a.level - b.level;
     else if (key === "daysInFaction") cmp = a.daysInFaction - b.daysInFaction;
+    else if (key === "lastAction") cmp = a.lastActionTimestamp - b.lastActionTimestamp;
     else cmp = a.name.localeCompare(b.name);
     return dir === "asc" ? cmp : -cmp;
   });
@@ -764,7 +765,14 @@ export default function PiMarriageScout() {
                           In Faction <SortIcon active={sortKey === "daysInFaction"} dir={sortDir} />
                         </div>
                       </th>
-                      <th className="text-left px-4 py-2">Last Action</th>
+                      <th
+                        className="text-left px-4 py-2 cursor-pointer hover:text-foreground select-none"
+                        onClick={() => handleSort("lastAction")}
+                      >
+                        <div className="flex items-center gap-1">
+                          Last Action <SortIcon active={sortKey === "lastAction"} dir={sortDir} />
+                        </div>
+                      </th>
                       <th className="px-4 py-2" />
                     </tr>
                   </thead>

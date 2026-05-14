@@ -10,6 +10,7 @@ export interface ScoutResult {
   factionName: string;
   lastAction: string;
   lastActionStatus: string;
+  lastActionTimestamp: number;
 }
 
 export type ScanPhase = "idle" | "fetching" | "scanning" | "done" | "error";
@@ -149,6 +150,7 @@ export function usePiScout(apiKey: string | null) {
                 factionName: member.factionName,
                 lastAction: profile.last_action?.relative ?? "Unknown",
                 lastActionStatus: profile.last_action?.status ?? "unknown",
+                lastActionTimestamp: profile.last_action?.timestamp ?? 0,
               };
               factionHits.push(hit);
               allHits.push(hit);
