@@ -439,3 +439,7 @@
   transform: rotate(1.5deg);
   filter: drop-shadow(0 6px 16px rgba(0,0,0,0.5));
 }
+
+/* per-card roots: restore the spacing the old shared panel provided */
+.tdh-root { margin-bottom: 10px; font-family: Arial, sans-serif; }
+#tdh-root-eff { margin-top: 0; }
