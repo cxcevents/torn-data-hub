@@ -39,8 +39,12 @@ export function useXanaxLog(apiKey: string | null) {
 
       // Torn's log API returns at most ~100 entries per call (all log types),
       // so paginate backwards with `to=` until the whole window is covered.
-      const all: LogEntry[] = [];
+      // Log record IDs (object keys) uniquely identify entries; timestamps can
+      // repeat within the same second, so we use `to=oldest` (inclusive) to
+      // catch same-second entries at page boundaries and dedupe by record ID.
+      const byId = new Map<string, LogEntry>();
       let to: number | null = null;
+      let prevOldest = Infinity;
       for (let page = 0; page < 25; page++) {
         const url =
           `https://api.torn.com/user/?selections=log&from=${from}` +
@@ -51,19 +55,26 @@ export function useXanaxLog(apiKey: string | null) {
         const data = await res.json();
         if (data.error) throw new Error(data.error.error || "Log API error");
 
-        const entries = Object.values(data.log ?? {}) as LogEntry[];
+        const entries = Object.entries(data.log ?? {}) as [string, LogEntry][];
         if (entries.length === 0) break;
-        all.push(...entries);
+        let newCount = 0;
+        for (const [id, e] of entries) {
+          if (!byId.has(id)) { byId.set(id, e); newCount++; }
+        }
 
-        const oldest = Math.min(...entries.map((e) => e.timestamp));
+        const oldest = Math.min(...entries.map(([, e]) => e.timestamp));
         if (entries.length < 100 || oldest <= from) break;
-        to = oldest - 1;
+        if (newCount === 0 || oldest >= prevOldest) {
+          // No progress at this timestamp (pathological same-second page): step past it.
+          to = oldest - 1;
+        } else {
+          to = oldest; // inclusive, so same-second siblings aren't skipped
+        }
+        prevOldest = oldest;
       }
 
-      const seen = new Set<number>();
-      const xanaxEntries = all
+      const xanaxEntries = [...byId.values()]
         .filter(isXanaxEntry)
-        .filter((e) => (seen.has(e.timestamp) ? false : (seen.add(e.timestamp), true)))
         .sort((a, b) => b.timestamp - a.timestamp); // newest first
 
       const dailyCounts: Record<string, number> = {};
@@ -79,8 +90,10 @@ export function useXanaxLog(apiKey: string | null) {
       return { todayCount, dailyCounts, lastUsedTimestamp };
     },
     enabled: !!apiKey,
-    refetchInterval: 30000,
-    staleTime: 15000,
+    // Full-history fetch can take many API calls; keep it infrequent to
+    // preserve rate-limit headroom (Torn allows 100 req/min per key).
+    refetchInterval: 120000,
+    staleTime: 60000,
     retry: false,
   });
 }
