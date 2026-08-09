@@ -216,7 +216,7 @@
 }
 
 /* ── effective battle stats ── */
-#tdh-eff {
+#tdh-eff, #tdh-root-eff {
   background: #191919;
   border: 1px solid #333;
   border-radius: 5px;
@@ -333,7 +333,7 @@
 }
 .tdh-light .tdh-error-text { color: #b91c1c; }
 
-#tdh-eff.tdh-light {
+#tdh-eff.tdh-light, #tdh-root-eff.tdh-light {
   background: #f2f2f2;
   border-color: #ccc;
 }
