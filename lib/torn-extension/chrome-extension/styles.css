@@ -349,3 +349,7 @@
 }
 .tdh-light .tdh-eff-row.total .tdh-eff-name { color: #333; }
 .tdh-light .tdh-eff-row.total .tdh-eff-val { color: #15803d; }
+
+/* ── clickable sidebar bars (Energy → Gym, Nerve → Crimes) ── */
+.tdh-bar-link { cursor: pointer; }
+.tdh-bar-link:hover { filter: brightness(1.15); }

@@ -8,7 +8,7 @@
   "host_permissions": ["https://api.torn.com/*"],
   "content_scripts": [
     {
-      "matches": ["https://www.torn.com/index.php*"],
+      "matches": ["https://www.torn.com/*"],
       "js": ["content.js"],
       "css": ["styles.css"],
       "run_at": "document_idle"
