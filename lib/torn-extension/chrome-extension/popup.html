@@ -96,6 +96,13 @@
         padding: 8px 12px; border-top: 1px solid #262626; color: #555;
         font-size: 10px; display: flex; justify-content: space-between;
       }
+      .toggles { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+      .toggle {
+        display: flex; align-items: center; gap: 7px;
+        color: #aaa; font-size: 11px; text-transform: none; letter-spacing: 0;
+        margin: 0; cursor: pointer;
+      }
+      .toggle input { flex: none; accent-color: #dc2626; margin: 0; }
       .dash-link { text-align: center; }
       .dash-link a {
         display: inline-block; font-size: 10px; font-weight: 700;
@@ -120,9 +127,19 @@
           <button class="save" id="save">Save</button>
         </div>
         <div class="status" id="status"></div>
+        <label style="margin-top:12px">Features</label>
+        <div class="toggles" id="toggles">
+          <label class="toggle"><input type="checkbox" data-f="xanax" /> Xanax card (homepage)</label>
+          <label class="toggle"><input type="checkbox" data-f="refills" /> Refills card (homepage)</label>
+          <label class="toggle"><input type="checkbox" data-f="effstats" /> Effective battle stats (homepage)</label>
+          <label class="toggle"><input type="checkbox" data-f="gym" /> Gym efficiency card (gym page)</label>
+          <label class="toggle"><input type="checkbox" data-f="barlinks" /> Clickable Energy/Nerve bars + glow</label>
+          <label class="toggle"><input type="checkbox" data-f="nag" /> Full-energy warning</label>
+        </div>
         <div class="note">
+          Turn features off if another extension already covers them.
+          Changes apply after refreshing the Torn tab.
           Your key is stored only in this browser and sent only to api.torn.com.
-          Overlays appear on the Torn homepage under your Battle Stats.
         </div>
       </div>
     </div>
