@@ -419,8 +419,10 @@
   margin-left: auto;
   flex: none;
   background-color: #555;
-  -webkit-mask: url("https://www.torn.com/images/v2/home_main/move.svg") no-repeat center / contain;
-  mask: url("https://www.torn.com/images/v2/home_main/move.svg") no-repeat center / contain;
+  /* move.svg is a 60x30 sprite with two icon states side by side —
+     scale the mask to 200% width so only the left icon shows */
+  -webkit-mask: url("https://www.torn.com/images/v2/home_main/move.svg") no-repeat left center / 200% 100%;
+  mask: url("https://www.torn.com/images/v2/home_main/move.svg") no-repeat left center / 200% 100%;
   opacity: 0.7;
   transition: background-color 0.15s;
 }
