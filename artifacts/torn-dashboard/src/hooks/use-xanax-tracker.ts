@@ -7,9 +7,10 @@ const XANAX_MANUAL_KEY = "torn_xanax_manual_v1";
 type XanaxHistory = Record<string, number>; // "YYYY-MM-DD" -> cumulative total
 type ManualCounts = Record<string, number>;
 
+// Day buckets use TCT (Torn City Time = UTC) to match Torn's daily reset.
 export function getTodayStr(): string {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
 function loadHistory(): XanaxHistory {

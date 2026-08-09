@@ -1,20 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
 import type { LogEntry } from "./use-enhancer-log";
 
+// Torn's daily reset runs on TCT (Torn City Time = UTC), so all day
+// bucketing uses UTC dates, not the user's local timezone.
 function dateStr(unixSec: number): string {
   const d = new Date(unixSec * 1000);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
 function getTodayStr(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return dateStr(Math.floor(Date.now() / 1000));
 }
 
 function get30DaysAgoUnix(): number {
   const d = new Date();
-  d.setDate(d.getDate() - 30);
-  d.setHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() - 30);
+  d.setUTCHours(0, 0, 0, 0);
   return Math.floor(d.getTime() / 1000);
 }
 
