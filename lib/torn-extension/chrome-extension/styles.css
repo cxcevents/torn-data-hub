@@ -408,11 +408,10 @@
 
 /* ── draggable card roots (mirror Torn's own card re-ordering) ── */
 .tdh-root .tdh-card-head {
-  cursor: grab;
+  cursor: move; /* four-arrow move cursor, same as Torn's draggable cards */
   user-select: none;
   position: relative;
 }
-.tdh-root .tdh-card-head:active { cursor: grabbing; }
 /* Torn's own "move" icon as the drag handle, right side of the header */
 .tdh-root .tdh-card-head::after {
   content: "";
