@@ -36,16 +36,34 @@ export function useXanaxLog(apiKey: string | null) {
     queryKey: ["torn", "log", "xanax-history", apiKey ? String(apiKey).substring(0, 4) : "none"],
     queryFn: async () => {
       if (!apiKey) throw new Error("No key");
-      const url = `https://api.torn.com/user/?selections=log&from=${from}&key=${apiKey}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error("Network error");
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.error || "Log API error");
 
-      const entries = Object.values(data.log ?? {}) as LogEntry[];
+      // Torn's log API returns at most ~100 entries per call (all log types),
+      // so paginate backwards with `to=` until the whole window is covered.
+      const all: LogEntry[] = [];
+      let to: number | null = null;
+      for (let page = 0; page < 25; page++) {
+        const url =
+          `https://api.torn.com/user/?selections=log&from=${from}` +
+          (to !== null ? `&to=${to}` : "") +
+          `&key=${apiKey}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Network error");
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.error || "Log API error");
 
-      const xanaxEntries = entries
+        const entries = Object.values(data.log ?? {}) as LogEntry[];
+        if (entries.length === 0) break;
+        all.push(...entries);
+
+        const oldest = Math.min(...entries.map((e) => e.timestamp));
+        if (entries.length < 100 || oldest <= from) break;
+        to = oldest - 1;
+      }
+
+      const seen = new Set<number>();
+      const xanaxEntries = all
         .filter(isXanaxEntry)
+        .filter((e) => (seen.has(e.timestamp) ? false : (seen.add(e.timestamp), true)))
         .sort((a, b) => b.timestamp - a.timestamp); // newest first
 
       const dailyCounts: Record<string, number> = {};

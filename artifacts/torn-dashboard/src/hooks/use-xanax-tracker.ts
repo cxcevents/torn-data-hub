@@ -87,9 +87,9 @@ export function useXanaxTracker(apiKey: string | null, xantakenTotal: number | u
   // Monthly history: log data takes priority; fall back to snapshot deltas; fall back to manual
   const monthData = useMemo((): XanaxDayEntry[] => {
     const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const daysInMonth = now.getDate();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
+    const daysInMonth = now.getUTCDate();
     const result: XanaxDayEntry[] = [];
 
     for (let day = 1; day <= daysInMonth; day++) {
