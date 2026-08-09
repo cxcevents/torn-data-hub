@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        width: 300px;
+        margin: 0;
+        background: #141414;
+        color: #ccc;
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+      }
+      .head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        background: linear-gradient(180deg, #222 0%, #1a1a1a 100%);
+        border-bottom: 1px solid #333;
+      }
+      .title {
+        display: flex; align-items: center; gap: 7px;
+        font-size: 11px; font-weight: 700;
+        letter-spacing: 0.1em; text-transform: uppercase; color: #999;
+      }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: #dc2626; }
+      .gear {
+        background: none; border: none; color: #666; cursor: pointer;
+        font-size: 14px; padding: 0 2px; line-height: 1;
+      }
+      .gear:hover { color: #ccc; }
+
+      .body { padding: 12px; }
+
+      /* ── vitals bars ── */
+      .vital { margin-bottom: 10px; }
+      .vital:last-child { margin-bottom: 0; }
+      .vital-row {
+        display: flex; align-items: baseline; justify-content: space-between;
+        margin-bottom: 4px;
+      }
+      .vital-name {
+        font-size: 9px; font-weight: 700;
+        letter-spacing: 0.12em; text-transform: uppercase; color: #777;
+      }
+      .vital-val {
+        font-size: 11px; font-weight: 700;
+        font-family: Consolas, Monaco, monospace; color: #ddd;
+      }
+      .vital-val .max { color: #666; font-weight: 400; }
+      .track {
+        height: 7px; border-radius: 99px; background: #2a2a2a; overflow: hidden;
+      }
+      .fill { height: 100%; border-radius: 99px; transition: width 0.4s ease-out; }
+      .fill.energy { background: #22c55e; }
+      .fill.nerve  { background: #ef4444; }
+      .fill.happy  { background: #fbbf24; }
+      .fill.life   { background: #3b82f6; }
+      .fill.cd     { background: rgba(220,38,38,0.7); }
+      .fill.cd-done{ background: #22c55e; }
+
+      .section {
+        margin-top: 12px; padding-top: 10px; border-top: 1px solid #262626;
+      }
+      .cd-row {
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 4px;
+      }
+      .cd-label { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #666; }
+      .cd-val { font-size: 11px; font-weight: 700; font-family: Consolas, Monaco, monospace; color: #999; }
+      .cd-val.ready { color: #4ade80; text-transform: uppercase; font-size: 10px; letter-spacing: 0.08em; }
+
+      /* ── settings ── */
+      #settings { display: none; }
+      body.show-settings #vitals { display: none; }
+      body.show-settings #settings { display: block; }
+      label { display: block; color: #777; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 5px; }
+      .row { display: flex; gap: 6px; }
+      input {
+        flex: 1; background: #222; border: 1px solid #3a3a3a; border-radius: 3px;
+        color: #ccc; font-size: 12px; padding: 6px 8px; outline: none; min-width: 0;
+      }
+      input:focus { border-color: #dc2626; }
+      button.save {
+        background: #dc2626; border: none; border-radius: 3px; color: #fff;
+        font-size: 12px; font-weight: 700; padding: 6px 12px; cursor: pointer;
+      }
+      button.save:hover { background: #b91c1c; }
+      .note { color: #666; font-size: 10px; margin-top: 10px; line-height: 1.5; }
+      .status { margin-top: 8px; font-size: 11px; min-height: 14px; }
+      .status.ok { color: #4ade80; }
+      .status.err { color: #ef4444; }
+
+      .foot {
+        padding: 8px 12px; border-top: 1px solid #262626; color: #555;
+        font-size: 10px; display: flex; justify-content: space-between;
+      }
+      a { color: #f87171; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .muted { color: #555; font-size: 10px; text-align: center; padding: 8px 0; }
+    </style>
+  </head>
+  <body>
+    <div class="head">
+      <span class="title"><span class="dot"></span>Torn Data Hub</span>
+      <button class="gear" id="gear" title="Settings">⚙</button>
+    </div>
+    <div class="body">
+      <div id="vitals"><div class="muted">Loading…</div></div>
+      <div id="settings">
+        <label for="key">Torn API key (Limited Access or higher)</label>
+        <div class="row">
+          <input id="key" type="password" placeholder="Paste your API key" />
+          <button class="save" id="save">Save</button>
+        </div>
+        <div class="status" id="status"></div>
+        <div class="note">
+          Your key is stored only in this browser and sent only to api.torn.com.
+          Overlays appear on the Torn homepage under your Battle Stats.
+        </div>
+      </div>
+    </div>
+    <div class="foot">
+      <span id="ver"></span>
+      <a id="update" href="#" target="_blank" rel="noreferrer" style="display:none">Update available ↓</a>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

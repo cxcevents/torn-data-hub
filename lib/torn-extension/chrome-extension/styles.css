@@ -1,0 +1,282 @@
+#tdh-panel {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-family: Arial, sans-serif;
+}
+.tdh-card {
+  flex: 1;
+  background: #191919;
+  border: 1px solid #333;
+  border-radius: 5px;
+  overflow: hidden;
+  min-width: 0;
+}
+.tdh-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: linear-gradient(180deg, #222 0%, #1a1a1a 100%);
+  border-bottom: 1px solid #333;
+}
+.tdh-card-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tdh-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #dc2626;
+  display: inline-block;
+}
+.tdh-live {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(220,38,38,0.6);
+}
+.tdh-card-body { padding: 8px 10px; }
+
+/* ── xanax ── */
+.tdh-xan-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.tdh-xan-count {
+  font-size: 24px;
+  font-weight: 900;
+  font-family: Consolas, Monaco, monospace;
+  line-height: 1;
+}
+.tdh-xan-count .tdh-goal-frac {
+  font-size: 12px;
+  font-weight: 700;
+  color: #777;
+  font-family: Arial, sans-serif;
+}
+.tdh-c-green  { color: #4ade80; }
+.tdh-c-amber  { color: #fbbf24; }
+.tdh-c-orange { color: #fb923c; }
+.tdh-c-dim    { color: #666; }
+.tdh-badge {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid;
+}
+.tdh-badge.met {
+  color: #4ade80;
+  border-color: rgba(74,222,128,0.3);
+  background: rgba(74,222,128,0.08);
+}
+.tdh-badge.togo {
+  color: #888;
+  border-color: #3a3a3a;
+  background: #222;
+}
+.tdh-track {
+  height: 5px;
+  border-radius: 99px;
+  background: #2a2a2a;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.tdh-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.5s ease-out;
+}
+.tdh-fill.green  { background: #22c55e; }
+.tdh-fill.amber  { background: #fbbf24; }
+.tdh-fill.orange { background: #f97316; }
+.tdh-fill.red    { background: rgba(239,68,68,0.5); }
+.tdh-cd-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.tdh-cd-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #666;
+}
+.tdh-cd-val {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: Consolas, Monaco, monospace;
+  color: #999;
+}
+.tdh-cd-val.ready {
+  color: #4ade80;
+  animation: tdh-blink 1s ease-in-out infinite;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 10px;
+}
+.tdh-fill.cd      { background: rgba(220,38,38,0.7); }
+.tdh-fill.cd-warm { background: #fbbf24; }
+.tdh-fill.cd-done { background: #22c55e; }
+
+/* ── refills ── */
+.tdh-refill-grid {
+  display: flex;
+  gap: 6px;
+}
+.tdh-refill {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: 4px;
+  border: 1px solid;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  display: block;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.tdh-refill:hover { filter: brightness(1.25); }
+.tdh-refill.avail.energy {
+  background: rgba(34,197,94,0.12);
+  color: #4ade80;
+  border-color: rgba(34,197,94,0.4);
+  box-shadow: 0 0 10px rgba(34,197,94,0.25);
+  animation: tdh-blink 1.6s ease-in-out infinite;
+}
+.tdh-refill.avail.nerve {
+  background: rgba(239,68,68,0.12);
+  color: #f87171;
+  border-color: rgba(239,68,68,0.4);
+  box-shadow: 0 0 10px rgba(239,68,68,0.25);
+  animation: tdh-blink 1.6s ease-in-out infinite;
+}
+.tdh-refill.avail.casino {
+  background: rgba(161,161,170,0.1);
+  color: #d4d4d8;
+  border-color: rgba(161,161,170,0.35);
+}
+.tdh-refill.used {
+  background: #1f1f1f;
+  color: #4a4a4a;
+  border-color: #2e2e2e;
+  text-decoration: line-through;
+}
+
+/* ── setup / error ── */
+.tdh-setup-body {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.tdh-setup-body input {
+  flex: 1;
+  background: #222;
+  border: 1px solid #3a3a3a;
+  border-radius: 3px;
+  color: #ccc;
+  font-size: 11px;
+  padding: 5px 8px;
+  outline: none;
+  min-width: 0;
+}
+.tdh-setup-body input:focus { border-color: #dc2626; }
+.tdh-setup-body button {
+  background: #dc2626;
+  border: none;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.tdh-setup-body button:hover { background: #b91c1c; }
+.tdh-error-text {
+  color: #ef4444;
+  font-size: 10px;
+  padding: 4px 0;
+}
+
+/* ── effective battle stats ── */
+#tdh-eff {
+  background: #191919;
+  border: 1px solid #333;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  font-family: Arial, sans-serif;
+}
+.tdh-eff-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  border-bottom: 1px solid #262626;
+}
+.tdh-eff-row:last-child { border-bottom: none; }
+.tdh-eff-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #aaa;
+}
+.tdh-eff-vals {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.tdh-eff-mod {
+  font-size: 9px;
+  font-weight: 700;
+  font-family: Consolas, Monaco, monospace;
+}
+.tdh-eff-mod.pos { color: #4ade80; }
+.tdh-eff-mod.neg { color: #f87171; }
+.tdh-eff-mod.zero { color: #555; }
+.tdh-eff-val {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: Consolas, Monaco, monospace;
+  color: #ddd;
+  min-width: 110px;
+  text-align: right;
+}
+.tdh-eff-row.total {
+  background: #1f1f1f;
+  border-top: 1px solid #333;
+}
+.tdh-eff-row.total .tdh-eff-name { color: #ddd; }
+.tdh-eff-row.total .tdh-eff-val { color: #4ade80; }
+
+/* ── update banner ── */
+.tdh-update {
+  font-size: 9px;
+  font-weight: 700;
+  color: #fbbf24;
+  text-decoration: none;
+  letter-spacing: 0.05em;
+}
+.tdh-update:hover { text-decoration: underline; }
+
+@keyframes tdh-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
