@@ -1,0 +1,66 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Effective Stats spacing — before / after</title>
+<link rel="stylesheet" href="ext/chrome-extension/styles.css" />
+<style>
+  body { background: #2b2b2b; font-family: Arial, sans-serif; color: #ccc; margin: 0; padding: 24px; }
+  .wrap { display: flex; gap: 40px; justify-content: center; }
+  .col { width: 386px; }
+  .col h2 { font-size: 13px; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: .08em; margin: 0 0 10px; }
+  /* ── mock of Torn's Battle Stats card ── */
+  .torn-card { background: #191919; border-radius: 5px; overflow: hidden; }
+  .torn-head { display:flex; justify-content:space-between; align-items:center; padding: 8px 10px; background: linear-gradient(180deg,#444 0%,#333 100%); color:#fff; font-weight:700; font-size:12px; }
+  .torn-row { display:flex; justify-content:space-between; padding: 9px 10px; font-size: 12px; border-bottom: 1px solid #222; background:#2e2e2e; }
+  .torn-row:nth-child(odd) { background:#262626; }
+  .torn-row .v { color:#8db98d; }
+  .torn-row.total { background:#1f1f1f; font-weight:700; }
+  .torn-row.total .v { color:#ddd; }
+  /* AFTER: kill the gap + merge the borders so it reads as one card */
+  .after #tdh-eff { margin-top: 0; border-top: none; border-radius: 0; border-left: none; border-right: none; border-bottom: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="col">
+    <h2>Before (current)</h2>
+    <div class="torn-card">
+      <div class="torn-head"><span>Battle Stats</span><span>+ ▾</span></div>
+      <div class="torn-row"><span>Strength</span><span class="v">868,044,777</span></div>
+      <div class="torn-row"><span>Defense</span><span class="v">868,019,779</span></div>
+      <div class="torn-row"><span>Speed</span><span class="v">868,162,835</span></div>
+      <div class="torn-row"><span>Dexterity</span><span class="v">868,134,061</span></div>
+      <div class="torn-row total"><span>Total</span><span class="v">3,472,361,452</span></div>
+      <div id="tdh-eff">
+        <div class="tdh-card-head"><span class="tdh-card-title"><span class="tdh-dot"></span>Effective Battle Stats</span><span class="tdh-live">Live</span></div>
+        <div class="tdh-eff-row"><span class="tdh-eff-name">Strength</span><span class="tdh-eff-vals"><span class="tdh-eff-mod pos">+21%</span><span class="tdh-eff-val">1,050,334,180</span></span></div>
+        <div class="tdh-eff-row"><span class="tdh-eff-name">Defense</span><span class="tdh-eff-vals"><span class="tdh-eff-mod pos">+15%</span><span class="tdh-eff-val">998,222,745</span></span></div>
+        <div class="tdh-eff-row"><span class="tdh-eff-name">Speed</span><span class="tdh-eff-vals"><span class="tdh-eff-mod pos">+30%</span><span class="tdh-eff-val">1,128,611,685</span></span></div>
+        <div class="tdh-eff-row"><span class="tdh-eff-name">Dexterity</span><span class="tdh-eff-vals"><span class="tdh-eff-mod pos">+23%</span><span class="tdh-eff-val">1,067,804,895</span></span></div>
+        <div class="tdh-eff-row total"><span class="tdh-eff-name">Total</span><span class="tdh-eff-vals"><span class="tdh-eff-val">4,244,973,505</span></span></div>
+      </div>
+    </div>
+  </div>
+  <div class="col after">
+    <h2>After (proposed)</h2>
+    <div class="torn-card">
+      <div class="torn-head"><span>Battle Stats</span><span>+ ▾</span></div>
+      <div class="torn-row"><span>Strength</span><span class="v">868,044,777</span></div>
+      <div class="torn-row"><span>Defense</span><span class="v">868,019,779</span></div>
+      <div class="torn-row"><span>Speed</span><span class="v">868,162,835</span></div>
+      <div class="torn-row"><span>Dexterity</span><span class="v">868,134,061</span></div>
+      <div class="torn-row total"><span>Total</span><span class="v">3,472,361,452</span></div>
+      <div id="tdh-eff">
+        <div class="tdh-card-head"><span class="tdh-card-title"><span class="tdh-dot"></span>Effective Battle Stats</span><span class="tdh-live">Live</span></div>
+        <div class="tdh-eff-row"><span class="tdh-eff-name">Strength</span><span class="tdh-eff-vals"><span class="tdh-eff-mod pos">+21%</span><span class="tdh-eff-val">1,050,334,180</span></span></div>
+        <div class="tdh-eff-row"><span class="tdh-eff-name">Defense</span><span class="tdh-eff-vals"><span class="tdh-eff-mod pos">+15%</span><span class="tdh-eff-val">998,222,745</span></span></div>
+        <div class="tdh-eff-row"><span class="tdh-eff-name">Speed</span><span class="tdh-eff-vals"><span class="tdh-eff-mod pos">+30%</span><span class="tdh-eff-val">1,128,611,685</span></span></div>
+        <div class="tdh-eff-row"><span class="tdh-eff-name">Dexterity</span><span class="tdh-eff-vals"><span class="tdh-eff-mod pos">+23%</span><span class="tdh-eff-val">1,067,804,895</span></span></div>
+        <div class="tdh-eff-row total"><span class="tdh-eff-name">Total</span><span class="tdh-eff-vals"><span class="tdh-eff-val">4,244,973,505</span></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
