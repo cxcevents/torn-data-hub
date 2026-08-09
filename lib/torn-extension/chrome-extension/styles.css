@@ -16,6 +16,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 6px 10px;
   background: linear-gradient(180deg, #222 0%, #1a1a1a 100%);
   border-bottom: 1px solid #333;
@@ -415,14 +416,14 @@
 /* Torn's own "move" icon as the drag handle, right side of the header */
 .tdh-root .tdh-card-head::after {
   content: "";
-  width: 15px; height: 15px;
+  width: 20px; height: 20px;
   margin-left: auto;
   flex: none;
   background-color: #555;
   /* move.svg is a 60x30 sprite with two icon states; the glyph itself is 15x15
-     at (7,7) inside the left half — crop to it at native 1:1 scale */
-  -webkit-mask: url("https://www.torn.com/images/v2/home_main/move.svg") no-repeat -7px -7px / 60px 30px;
-  mask: url("https://www.torn.com/images/v2/home_main/move.svg") no-repeat -7px -7px / 60px 30px;
+     at (7,7) inside the left half — crop to it, scaled up to 20px (1.333x) */
+  -webkit-mask: url("https://www.torn.com/images/v2/home_main/move.svg") no-repeat -9.33px -9.33px / 80px 40px;
+  mask: url("https://www.torn.com/images/v2/home_main/move.svg") no-repeat -9.33px -9.33px / 80px 40px;
   opacity: 0.7;
   transition: background-color 0.15s;
 }
