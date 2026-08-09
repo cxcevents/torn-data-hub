@@ -219,10 +219,12 @@
 /* ── effective battle stats ── */
 #tdh-eff, #tdh-root-eff {
   background: #191919;
-  border: none;          /* fuses onto the bottom of Torn's Battle Stats card */
-  border-radius: 0;
+  border: none;            /* fuses onto the bottom of Torn's Battle Stats card */
+  border-radius: 0 0 5px 5px; /* we now own the card's bottom corners */
   overflow: hidden;
-  margin: 0;
+  margin: -5px 0 0;        /* overlap Torn's own rounded bottom so it disappears */
+  position: relative;      /* paint above the row we overlap */
+  padding-top: 5px;
   font-family: Arial, sans-serif;
 }
 .tdh-eff-row {
