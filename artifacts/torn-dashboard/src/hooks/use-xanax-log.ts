@@ -46,8 +46,10 @@ export function useXanaxLog(apiKey: string | null) {
       let to: number | null = null;
       let prevOldest = Infinity;
       for (let page = 0; page < 25; page++) {
+        // log=2290 = "Item use xanax": server-side filter so the ~100-entry
+        // cap applies to xanax entries only, not the whole activity log.
         const url =
-          `https://api.torn.com/user/?selections=log&from=${from}` +
+          `https://api.torn.com/user/?selections=log&log=2290&from=${from}` +
           (to !== null ? `&to=${to}` : "") +
           `&key=${apiKey}`;
         const res = await fetch(url);
