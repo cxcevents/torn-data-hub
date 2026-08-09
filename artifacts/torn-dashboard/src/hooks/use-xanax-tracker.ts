@@ -116,29 +116,12 @@ export function useXanaxTracker(apiKey: string | null, xantakenTotal: number | u
         continue;
       }
 
-      // Snapshot delta for past days
-      const snapDates = Object.keys(history).sort();
-      const idx = snapDates.indexOf(dateStr);
-      if (idx > 0) {
-        const prevSnap = history[snapDates[idx - 1]];
-        const thisSnap = history[dateStr];
-        if (prevSnap !== undefined && thisSnap !== undefined) {
-          result.push({ date: dateStr, count: Math.max(0, thisSnap - prevSnap), source: "snapshot" });
-          continue;
-        }
-      }
-
-      // Manual fallback
-      if (manual[dateStr] !== undefined) {
-        result.push({ date: dateStr, count: manual[dateStr], source: "manual" });
-        continue;
-      }
-
-      // No data available for this day
+      // No log/archive data available for this day — leave it blank
+      // (month view is log-derived only)
     }
 
     return result;
-  }, [logReady, logData, archive, history, manual, today, todayCount, sourceIsLog, sourceIsDelta]);
+  }, [logReady, logData, archive, today, todayCount, sourceIsLog, sourceIsDelta]);
 
   const lastUsedTimestamp = logReady ? logData.lastUsedTimestamp : null;
 

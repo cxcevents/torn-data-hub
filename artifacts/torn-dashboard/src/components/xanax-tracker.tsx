@@ -15,15 +15,15 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function DayDots({ count, goal }: { count: number; goal: number }) {
+function DayPills({ count, goal }: { count: number; goal: number }) {
   return (
     <div className="flex items-center gap-1">
       {Array.from({ length: goal }).map((_, i) => (
         <div
           key={i}
           className={cn(
-            "w-2 h-2 rounded-full border",
-            i < count ? "bg-primary border-primary" : "bg-transparent border-border/50"
+            "w-6 h-1.5 rounded-full",
+            i < count ? "bg-primary" : "bg-border/50"
           )}
         />
       ))}
@@ -248,22 +248,13 @@ export function XanaxTracker({ xantakenTotal, drugCooldown, tick, playerId = nul
                         </div>
                         {entry !== null ? (
                           <>
-                            <DayDots count={entry.count} goal={goal} />
-                            <div className="flex items-center gap-1.5">
-                              <span className={cn(
-                                "font-mono font-bold w-4 text-right",
-                                entry.count >= goal ? "text-green-400" : entry.count > 0 ? "text-amber-400" : "text-muted-foreground/50"
-                              )}>
-                                {entry.count}
-                              </span>
-                              <div
-                                title={entry.source === "log" ? "From API log" : entry.source === "archive" ? "From saved history" : entry.source === "snapshot" ? "From snapshot" : "Manual"}
-                                className={cn(
-                                  "w-1 h-1 rounded-full flex-shrink-0",
-                                  entry.source === "log" ? "bg-primary/60" : entry.source === "archive" ? "bg-sky-400/60" : entry.source === "snapshot" ? "bg-muted-foreground/40" : "bg-amber-400/50"
-                                )}
-                              />
-                            </div>
+                            <DayPills count={entry.count} goal={goal} />
+                            <span className={cn(
+                              "font-mono font-bold w-4 text-right",
+                              entry.count >= goal ? "text-green-400" : entry.count > 0 ? "text-amber-400" : "text-muted-foreground/50"
+                            )}>
+                              {entry.count}
+                            </span>
                           </>
                         ) : (
                           <span className="text-[10px] text-muted-foreground/40 italic">no data</span>
@@ -271,24 +262,6 @@ export function XanaxTracker({ xantakenTotal, drugCooldown, tick, playerId = nul
                       </div>
                     ))
                   )}
-                </div>
-                <div className="flex items-center gap-3 pt-2 mt-1 border-t border-border/30">
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary/60" />
-                    <span className="text-[9px] text-muted-foreground/60">log</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-sky-400/60" />
-                    <span className="text-[9px] text-muted-foreground/60">saved</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
-                    <span className="text-[9px] text-muted-foreground/60">snapshot</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-400/50" />
-                    <span className="text-[9px] text-muted-foreground/60">manual</span>
-                  </div>
                 </div>
               </motion.div>
             )}
