@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useXanaxLog } from "./use-xanax-log";
-import { useXanaxArchive, useXanaxArchiveSync } from "./use-xanax-archive";
+import { useXanaxArchive, useXanaxArchiveSync, useXanaxLifetimeBackfill } from "./use-xanax-archive";
 
 const XANAX_HISTORY_KEY = "torn_xanax_tracker_v1";
 const XANAX_MANUAL_KEY = "torn_xanax_manual_v1";
@@ -39,8 +39,10 @@ export function useXanaxTracker(apiKey: string | null, xantakenTotal: number | u
   const [manual, setManual] = useState<ManualCounts>(loadManual);
 
   const { data: logData, isLoading: logLoading, isError: logError, refetch: refetchLog, isFetching: logFetching } = useXanaxLog(apiKey);
-  const { data: archive } = useXanaxArchive(playerId);
+  const { data: archive, refetch: refetchArchive } = useXanaxArchive(playerId);
   useXanaxArchiveSync(playerId, logData?.dailyCounts);
+  const onBackfillDone = useCallback(() => { refetchArchive(); }, [refetchArchive]);
+  useXanaxLifetimeBackfill(apiKey, playerId, archive, onBackfillDone);
 
   // Save API cumulative snapshot for future delta calculations
   useEffect(() => {
