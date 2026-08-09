@@ -27,4 +27,4 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
 
 ## User preferences
-- After every Chrome extension change, always include the download link in the reply: https://raw.githubusercontent.com/cxcevents/torn-data-hub/main/lib/torn-extension/torn-data-hub-extension.zip
+- After every Chrome extension change, always include the download link in the reply. Zips are versioned by manifest version (old builds move to `lib/torn-extension/archive/`): https://raw.githubusercontent.com/cxcevents/torn-data-hub/main/lib/torn-extension/torn-data-hub-extension-v<VERSION>.zip
