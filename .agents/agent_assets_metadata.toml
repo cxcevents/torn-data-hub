@@ -1,0 +1,16 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "kr1B00r7lKveKyZiX7TBr"
+uri = "file://lib/torn-extension/torn-data-hub-extension.zip"
+type = "unspecified"
+title = "Torn Data Hub v3.1.0 — Chrome Web Store package"
+description = "Upload this zip in the Chrome Web Store developer dashboard."
+
+[[outputs]]
+id = "__-Kut6q_LCYKO2ftbabL"
+uri = "file://lib/torn-extension/store-assets/screenshot-1-overview.jpg"
+type = "image"
+title = "Store screenshot (1280×800)"
+description = "Upload as the listing screenshot."

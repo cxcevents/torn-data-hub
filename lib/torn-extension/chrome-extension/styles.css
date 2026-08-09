@@ -266,16 +266,6 @@
 .tdh-eff-row.total .tdh-eff-name { color: #ddd; }
 .tdh-eff-row.total .tdh-eff-val { color: #4ade80; }
 
-/* ── update banner ── */
-.tdh-update {
-  font-size: 9px;
-  font-weight: 700;
-  color: #fbbf24;
-  text-decoration: none;
-  letter-spacing: 0.05em;
-}
-.tdh-update:hover { text-decoration: underline; }
-
 @keyframes tdh-blink {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.45; }
