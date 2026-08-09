@@ -270,3 +270,82 @@
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.45; }
 }
+
+/* ══ light mode (matches Torn's light theme; red dots stay TDH crimson) ══ */
+.tdh-light.tdh-card,
+.tdh-light .tdh-card {
+  background: #f2f2f2;
+  border-color: #ccc;
+}
+.tdh-light .tdh-card-head {
+  background: linear-gradient(180deg, #fff 0%, #e9e9e9 100%);
+  border-bottom-color: #ccc;
+}
+.tdh-light .tdh-card-title { color: #666; }
+.tdh-light .tdh-live { color: rgba(220,38,38,0.75); }
+
+.tdh-light .tdh-xan-count .tdh-goal-frac { color: #888; }
+.tdh-light .tdh-c-green  { color: #15803d; }
+.tdh-light .tdh-c-amber  { color: #b45309; }
+.tdh-light .tdh-c-orange { color: #c2410c; }
+.tdh-light .tdh-c-dim    { color: #999; }
+
+.tdh-light .tdh-badge.met {
+  color: #15803d;
+  border-color: rgba(21,128,61,0.35);
+  background: rgba(34,197,94,0.1);
+}
+.tdh-light .tdh-badge.togo {
+  color: #777;
+  border-color: #ccc;
+  background: #e5e5e5;
+}
+.tdh-light .tdh-track { background: #ddd; }
+.tdh-light .tdh-cd-label { color: #888; }
+.tdh-light .tdh-cd-val { color: #555; }
+.tdh-light .tdh-cd-val.ready { color: #15803d; }
+
+.tdh-light .tdh-refill.avail.energy {
+  background: rgba(34,197,94,0.12);
+  color: #15803d;
+  border-color: rgba(21,128,61,0.4);
+}
+.tdh-light .tdh-refill.avail.nerve {
+  background: rgba(239,68,68,0.1);
+  color: #b91c1c;
+  border-color: rgba(185,28,28,0.4);
+}
+.tdh-light .tdh-refill.avail.casino {
+  background: rgba(113,113,122,0.08);
+  color: #52525b;
+  border-color: rgba(113,113,122,0.35);
+}
+.tdh-light .tdh-refill.used {
+  background: #e5e5e5;
+  color: #aaa;
+  border-color: #d4d4d4;
+}
+
+.tdh-light .tdh-setup-body input {
+  background: #fff;
+  border-color: #ccc;
+  color: #333;
+}
+.tdh-light .tdh-error-text { color: #b91c1c; }
+
+#tdh-eff.tdh-light {
+  background: #f2f2f2;
+  border-color: #ccc;
+}
+.tdh-light .tdh-eff-row { border-bottom-color: #ddd; }
+.tdh-light .tdh-eff-name { color: #555; }
+.tdh-light .tdh-eff-val { color: #333; }
+.tdh-light .tdh-eff-mod.pos { color: #15803d; }
+.tdh-light .tdh-eff-mod.neg { color: #b91c1c; }
+.tdh-light .tdh-eff-mod.zero { color: #999; }
+.tdh-light .tdh-eff-row.total {
+  background: #e9e9e9;
+  border-top-color: #ccc;
+}
+.tdh-light .tdh-eff-row.total .tdh-eff-name { color: #333; }
+.tdh-light .tdh-eff-row.total .tdh-eff-val { color: #15803d; }
