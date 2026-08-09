@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useXanaxLog } from "./use-xanax-log";
+import { useXanaxArchive, useXanaxArchiveSync } from "./use-xanax-archive";
 
 const XANAX_HISTORY_KEY = "torn_xanax_tracker_v1";
 const XANAX_MANUAL_KEY = "torn_xanax_manual_v1";
@@ -30,14 +31,16 @@ function loadManual(): ManualCounts {
 export interface XanaxDayEntry {
   date: string;
   count: number;
-  source: "log" | "snapshot" | "manual" | "unknown";
+  source: "log" | "archive" | "snapshot" | "manual" | "unknown";
 }
 
-export function useXanaxTracker(apiKey: string | null, xantakenTotal: number | undefined) {
+export function useXanaxTracker(apiKey: string | null, xantakenTotal: number | undefined, playerId: number | null = null) {
   const [history, setHistory] = useState<XanaxHistory>(loadHistory);
   const [manual, setManual] = useState<ManualCounts>(loadManual);
 
-  const { data: logData, isLoading: logLoading, isError: logError } = useXanaxLog(apiKey);
+  const { data: logData, isLoading: logLoading, isError: logError, refetch: refetchLog, isFetching: logFetching } = useXanaxLog(apiKey);
+  const { data: archive } = useXanaxArchive(playerId);
+  useXanaxArchiveSync(playerId, logData?.dailyCounts);
 
   // Save API cumulative snapshot for future delta calculations
   useEffect(() => {
@@ -107,6 +110,12 @@ export function useXanaxTracker(apiKey: string | null, xantakenTotal: number | u
         continue;
       }
 
+      // Server archive (log data synced to our DB before it aged out of the API window)
+      if (archive && archive[dateStr] !== undefined) {
+        result.push({ date: dateStr, count: archive[dateStr], source: "archive" });
+        continue;
+      }
+
       // Snapshot delta for past days
       const snapDates = Object.keys(history).sort();
       const idx = snapDates.indexOf(dateStr);
@@ -129,9 +138,9 @@ export function useXanaxTracker(apiKey: string | null, xantakenTotal: number | u
     }
 
     return result;
-  }, [logReady, logData, history, manual, today, todayCount, sourceIsLog, sourceIsDelta]);
+  }, [logReady, logData, archive, history, manual, today, todayCount, sourceIsLog, sourceIsDelta]);
 
   const lastUsedTimestamp = logReady ? logData.lastUsedTimestamp : null;
 
-  return { todayCount, sourceIsLog, sourceIsDelta, sourceIsManual, adjustManual, monthData, today, goal: 3, lastUsedTimestamp };
+  return { todayCount, sourceIsLog, sourceIsDelta, sourceIsManual, adjustManual, monthData, today, goal: 3, lastUsedTimestamp, refetchLog, logFetching };
 }

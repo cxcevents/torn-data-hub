@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useXanaxTracker } from "@/hooks/use-xanax-tracker";
 import { useApiKey } from "@/hooks/use-api-key";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Pill, ChevronDown, Plus, Minus } from "lucide-react";
+import { Pill, ChevronDown, Plus, Minus, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { formatTimeRemaining } from "@/hooks/use-tick";
@@ -38,12 +38,13 @@ interface XanaxTrackerProps {
   xantakenTotal: number | undefined;
   drugCooldown?: number;
   tick: number;
+  playerId?: number | null;
 }
 
-export function XanaxTracker({ xantakenTotal, drugCooldown, tick }: XanaxTrackerProps) {
+export function XanaxTracker({ xantakenTotal, drugCooldown, tick, playerId = null }: XanaxTrackerProps) {
   const { apiKey } = useApiKey();
-  const { todayCount, sourceIsLog, sourceIsManual, adjustManual, monthData, today, goal } =
-    useXanaxTracker(apiKey, xantakenTotal);
+  const { todayCount, sourceIsLog, sourceIsManual, adjustManual, monthData, today, goal, refetchLog, logFetching } =
+    useXanaxTracker(apiKey, xantakenTotal, playerId);
 
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -198,15 +199,25 @@ export function XanaxTracker({ xantakenTotal, drugCooldown, tick }: XanaxTracker
           )}
 
           {/* History toggle */}
-          <button
-            onClick={() => setHistoryOpen((v) => !v)}
-            className="w-full flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors pt-1 border-t border-border/40"
-          >
-            <span>This Month</span>
-            <motion.div animate={{ rotate: historyOpen ? 0 : -90 }} transition={{ duration: 0.18 }}>
-              <ChevronDown className="w-3.5 h-3.5" />
-            </motion.div>
-          </button>
+          <div className="w-full flex items-center justify-between gap-2 pt-1 border-t border-border/40">
+            <button
+              onClick={() => setHistoryOpen((v) => !v)}
+              className="flex-1 flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <span>This Month</span>
+              <motion.div animate={{ rotate: historyOpen ? 0 : -90 }} transition={{ duration: 0.18 }}>
+                <ChevronDown className="w-3.5 h-3.5" />
+              </motion.div>
+            </button>
+            <button
+              onClick={() => refetchLog()}
+              disabled={logFetching}
+              title="Refresh from Torn log"
+              className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 flex-shrink-0"
+            >
+              <RefreshCw className={cn("w-3 h-3", logFetching && "animate-spin")} />
+            </button>
+          </div>
 
           <AnimatePresence initial={false}>
             {historyOpen && (
@@ -246,10 +257,10 @@ export function XanaxTracker({ xantakenTotal, drugCooldown, tick }: XanaxTracker
                                 {entry.count}
                               </span>
                               <div
-                                title={entry.source === "log" ? "From API log" : entry.source === "snapshot" ? "From snapshot" : "Manual"}
+                                title={entry.source === "log" ? "From API log" : entry.source === "archive" ? "From saved history" : entry.source === "snapshot" ? "From snapshot" : "Manual"}
                                 className={cn(
                                   "w-1 h-1 rounded-full flex-shrink-0",
-                                  entry.source === "log" ? "bg-primary/60" : entry.source === "snapshot" ? "bg-muted-foreground/40" : "bg-amber-400/50"
+                                  entry.source === "log" ? "bg-primary/60" : entry.source === "archive" ? "bg-sky-400/60" : entry.source === "snapshot" ? "bg-muted-foreground/40" : "bg-amber-400/50"
                                 )}
                               />
                             </div>
@@ -265,6 +276,10 @@ export function XanaxTracker({ xantakenTotal, drugCooldown, tick }: XanaxTracker
                   <div className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-primary/60" />
                     <span className="text-[9px] text-muted-foreground/60">log</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-sky-400/60" />
+                    <span className="text-[9px] text-muted-foreground/60">saved</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
