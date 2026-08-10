@@ -178,19 +178,49 @@ function StatsCell({
   target: LevelingTarget;
   userEffTotal: number;
 }) {
-  if (target.statusState === "loading" || !target.targetTotal || !userEffTotal) {
-    return null;
+  if (target.statusState === "loading" || !target.targetTotal) {
+    return <span className="text-xs text-muted-foreground/25">—</span>;
   }
 
-  // Only show something when the target is stronger — you might lose
-  const targetStronger = target.targetTotal > userEffTotal;
-  if (!targetStronger) return null;
+  const targetStronger = userEffTotal > 0 && target.targetTotal > userEffTotal;
+  const ratio = userEffTotal > 0 ? userEffTotal / target.targetTotal : null;
+  const safe = ratio !== null && ratio >= 2;
 
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-bold text-red-400 bg-red-400/10 border border-red-400/20 px-2 py-0.5 rounded-full">
-      <ShieldAlert className="w-3 h-3 flex-shrink-0" />
-      May beat you
-    </span>
+    <div className="space-y-0.5 min-w-[130px]">
+      <div className="flex items-center gap-1.5">
+        <span
+          className={cn(
+            "text-xs font-bold font-mono tabular-nums",
+            targetStronger ? "text-red-400" : safe ? "text-emerald-400" : "text-amber-400",
+          )}
+        >
+          {fmtStat(target.targetTotal)}
+        </span>
+        {targetStronger ? (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-red-400 bg-red-400/10 border border-red-400/20 px-1.5 py-px rounded-full">
+            <ShieldAlert className="w-3 h-3 flex-shrink-0" />
+            May beat you
+          </span>
+        ) : ratio !== null ? (
+          <span
+            className={cn(
+              "text-[10px] font-bold px-1.5 py-px rounded-full border",
+              safe
+                ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/20"
+                : "text-amber-400 bg-amber-400/10 border-amber-400/20",
+            )}
+          >
+            {ratio >= 10 ? `${Math.round(ratio)}×` : `${ratio.toFixed(1)}×`} you
+          </span>
+        ) : null}
+      </div>
+      {(target.targetStr > 0 || target.targetDef > 0 || target.targetSpd > 0 || target.targetDex > 0) && (
+        <span className="text-[10px] text-muted-foreground/50 font-mono tabular-nums block">
+          S:{fmtStat(target.targetStr)} · D:{fmtStat(target.targetDef)} · Sp:{fmtStat(target.targetSpd)} · Dx:{fmtStat(target.targetDex)}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -657,7 +687,7 @@ export default function LevelingTargets() {
                       </th>
                       <th className="px-4 py-2.5 text-left">
                         <button onClick={() => handleSort("stats")} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
-                          Threat <SortIcon active={sortKey === "stats"} dir={sortDir} />
+                          Stats <SortIcon active={sortKey === "stats"} dir={sortDir} />
                         </button>
                       </th>
                       <th className="px-4 py-2.5 text-left">
