@@ -312,10 +312,17 @@ export default function LevelingTargets() {
   const nowUnix = Math.floor(nowMs / 1000);
   const enhBonus = computeBonus(nowUnix);
   const userHasStats = !!(userData?.strength || userData?.defense || userData?.speed || userData?.dexterity);
-  const userEffStr = Math.round((userData?.strength ?? 0) * (1 + ((userData?.strength_modifier ?? 0) + enhBonus.strength) / 100));
-  const userEffDef = Math.round((userData?.defense ?? 0) * (1 + ((userData?.defense_modifier ?? 0) + enhBonus.defense) / 100));
-  const userEffSpd = Math.round((userData?.speed ?? 0) * (1 + ((userData?.speed_modifier ?? 0) + enhBonus.speed) / 100));
-  const userEffDex = Math.round((userData?.dexterity ?? 0) * (1 + ((userData?.dexterity_modifier ?? 0) + enhBonus.dexterity) / 100));
+  const realEffStr = Math.round((userData?.strength ?? 0) * (1 + ((userData?.strength_modifier ?? 0) + enhBonus.strength) / 100));
+  const realEffDef = Math.round((userData?.defense ?? 0) * (1 + ((userData?.defense_modifier ?? 0) + enhBonus.defense) / 100));
+  const realEffSpd = Math.round((userData?.speed ?? 0) * (1 + ((userData?.speed_modifier ?? 0) + enhBonus.speed) / 100));
+  const realEffDex = Math.round((userData?.dexterity ?? 0) * (1 + ((userData?.dexterity_modifier ?? 0) + enhBonus.dexterity) / 100));
+
+  // Preview mode: simulate viewing the page with a different stat total (split evenly)
+  const [simTotal, setSimTotal] = useState<number | null>(null);
+  const userEffStr = simTotal !== null ? Math.round(simTotal / 4) : realEffStr;
+  const userEffDef = simTotal !== null ? Math.round(simTotal / 4) : realEffDef;
+  const userEffSpd = simTotal !== null ? Math.round(simTotal / 4) : realEffSpd;
+  const userEffDex = simTotal !== null ? Math.round(simTotal / 4) : realEffDex;
   const userEffTotal = userEffStr + userEffDef + userEffSpd + userEffDex;
 
   const toggleList = useCallback(
@@ -436,12 +443,48 @@ export default function LevelingTargets() {
       {/* Your stats strip */}
       {userHasStats && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 rounded-md bg-muted/20 border border-border/30 text-xs">
-          <span className="text-muted-foreground/60 font-bold uppercase tracking-wider">Your effective stats</span>
-          <span className="font-mono font-bold text-foreground/70 tabular-nums">
+          <span className="text-muted-foreground/60 font-bold uppercase tracking-wider">
+            {simTotal !== null ? "Previewing as" : "Your effective stats"}
+          </span>
+          <span
+            className={cn(
+              "font-mono font-bold tabular-nums",
+              simTotal !== null ? "text-amber-400" : "text-foreground/70",
+            )}
+          >
             {fmtStat(userEffTotal)} total
           </span>
           <span className="text-muted-foreground/40 hidden sm:block">
             S:{fmtStat(userEffStr)} · D:{fmtStat(userEffDef)} · Sp:{fmtStat(userEffSpd)} · Dx:{fmtStat(userEffDex)}
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="text-muted-foreground/40">Preview as:</span>
+            {([
+              ["New (5k)", 5_000],
+              ["Casual (500k)", 500_000],
+              ["Mid (10m)", 10_000_000],
+            ] as const).map(([label, val]) => (
+              <button
+                key={label}
+                onClick={() => setSimTotal(simTotal === val ? null : val)}
+                className={cn(
+                  "text-[10px] font-bold px-1.5 py-px rounded border transition-colors",
+                  simTotal === val
+                    ? "text-amber-400 bg-amber-400/10 border-amber-400/30"
+                    : "text-muted-foreground/50 border-border/40 hover:text-foreground/70 hover:border-border",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+            {simTotal !== null && (
+              <button
+                onClick={() => setSimTotal(null)}
+                className="text-[10px] font-bold px-1.5 py-px rounded border border-border/40 text-muted-foreground/50 hover:text-foreground/70"
+              >
+                Back to me
+              </button>
+            )}
           </span>
           {lockedCount > 0 && (
             <span className="flex items-center gap-1 text-red-400/80 font-medium ml-auto">
