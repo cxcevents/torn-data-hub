@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import Settings from "@/pages/Settings";
 import Raw from "@/pages/Raw";
+import Extension from "@/pages/Extension";
 import PiMarriageScout from "@/pages/tools/PiMarriageScout";
 import LevelingTargets from "@/pages/tools/LevelingTargets";
 import Admin from "@/pages/Admin";
@@ -21,6 +22,7 @@ function Router() {
         <Route path="/" component={Dashboard} />
         <Route path="/settings" component={Settings} />
         <Route path="/raw" component={Raw} />
+        <Route path="/chrome-extension" component={Extension} />
         <Route path="/tools/pi-scout" component={PiMarriageScout} />
         <Route path="/tools/leveling-targets" component={LevelingTargets} />
         <Route path="/admin" component={Admin} />

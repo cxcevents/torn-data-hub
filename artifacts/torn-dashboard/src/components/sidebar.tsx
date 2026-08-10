@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import {
   LayoutDashboard, Settings, Code, Users, Wrench, TrendingUp,
-  ChevronLeft, ChevronRight, ChevronDown, Shield,
+  ChevronLeft, ChevronRight, ChevronDown, Shield, Chrome,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -82,6 +82,12 @@ export function Sidebar({ isAdmin }: SidebarProps) {
           href="/"
           icon={<LayoutDashboard className="w-4 h-4" />}
           label="Dashboard"
+          collapsed={collapsed}
+        />
+        <SidebarLink
+          href="/chrome-extension"
+          icon={<Chrome className="w-4 h-4" />}
+          label="Chrome Extension"
           collapsed={collapsed}
         />
 
