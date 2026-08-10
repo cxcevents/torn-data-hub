@@ -3,6 +3,7 @@ import { useApiKey } from "@/hooks/use-api-key";
 import { useTornUser } from "@/hooks/use-torn-user";
 import { useEnhancerActivations } from "@/hooks/use-enhancer-activations";
 import { useLevelingTargets, LIST_NAMES } from "@/hooks/use-leveling-targets";
+import { BattleReadiness } from "@/components/battle-readiness";
 import type { LevelingTarget, TargetStatus, ListName } from "@/hooks/use-leveling-targets";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -474,6 +475,9 @@ export default function LevelingTargets() {
           )}
         </div>
       )}
+
+      {/* Battle readiness: loadout, warnings, energy */}
+      <BattleReadiness apiKey={apiKey} />
 
       {/* Controls */}
       <Card className="bg-card">
