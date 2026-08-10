@@ -48,12 +48,12 @@ export function XanaxTracker({ xantakenTotal, drugCooldown, tick, playerId = nul
 
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  // Cooldown from API — same pattern as the Cooldowns card
-  const hasCooldown = (drugCooldown ?? 0) > 0;
-  const remaining = hasCooldown ? Math.max(0, (drugCooldown ?? 0) - tick) : 0;
-  const ready = hasCooldown && remaining === 0;
+  // Cooldown from API — an empty cooldown (0) also counts as ready
+  const cooldownKnown = drugCooldown !== undefined;
+  const remaining = cooldownKnown ? Math.max(0, (drugCooldown ?? 0) - tick) : 0;
+  const ready = cooldownKnown && remaining === 0;
   // Bar fills from 0→100% as cooldown drains to 0 (counting up to ready)
-  const cooldownPct = hasCooldown
+  const cooldownPct = cooldownKnown
     ? Math.min(100, ((XANAX_COOLDOWN_MAX - remaining) / XANAX_COOLDOWN_MAX) * 100)
     : null;
 
@@ -172,6 +172,18 @@ export function XanaxTracker({ xantakenTotal, drugCooldown, tick, playerId = nul
                   transition={{ duration: 0.8, ease: "linear" }}
                 />
               </div>
+              {ready && (
+                <motion.a
+                  href="https://www.torn.com/item.php#drugs-items"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-center text-[11px] font-bold text-white bg-red-600 hover:bg-red-500 border border-red-500 rounded px-2 py-1.5 mt-1"
+                  animate={{ opacity: [1, 0.45, 1] }}
+                  transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  💊 Cooldown clear — take a Xanax →
+                </motion.a>
+              )}
             </div>
           )}
 

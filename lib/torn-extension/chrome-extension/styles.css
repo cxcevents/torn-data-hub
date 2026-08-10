@@ -444,3 +444,24 @@
 /* per-card roots: restore the spacing the old shared panel provided */
 .tdh-root { margin-bottom: 10px; font-family: Arial, sans-serif; }
 #tdh-root-eff { margin-top: 0; }
+
+/* ── xanax-ready flashing notice ── */
+.tdh-xan-alert {
+  display: block;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  color: #fff;
+  background: #dc2626;
+  border: 1px solid #ef4444;
+  animation: tdh-xan-flash 1.2s ease-in-out infinite;
+}
+.tdh-xan-alert:hover { animation-play-state: paused; background: #ef4444; }
+@keyframes tdh-xan-flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
