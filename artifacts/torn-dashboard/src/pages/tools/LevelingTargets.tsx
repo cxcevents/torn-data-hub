@@ -211,7 +211,7 @@ function StatsCell({
                 : "text-amber-400 bg-amber-400/10 border-amber-400/20",
             )}
           >
-            {ratio >= 10 ? `${Math.round(ratio)}×` : `${ratio.toFixed(1)}×`} you
+            {ratio >= 10 ? `${Math.round(ratio)}×` : `${ratio.toFixed(1)}×`} weaker
           </span>
         ) : null}
       </div>
