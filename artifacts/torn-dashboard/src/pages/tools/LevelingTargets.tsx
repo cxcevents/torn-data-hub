@@ -237,7 +237,7 @@ function AttackCell({
 
   return (
     <a
-      href={`https://www.torn.com/loader.php?sid=attack&user2ID=${target.id}`}
+      href={`https://www.torn.com/page.php?sid=attack&user2ID=${target.id}`}
       target="_blank"
       rel="noopener noreferrer"
     >
