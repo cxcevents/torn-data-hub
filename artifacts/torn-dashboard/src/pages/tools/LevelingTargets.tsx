@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const STORAGE_KEY = "leveling_targets_lists_v2";
 
 // Attack gate: block attack when user is this many times stronger than target
-const RATIO_LOCK = 5;
+const LEVEL_LOCK = 0.25; // little XP when target level < 25% of yours
 
 const LAST_ACTION_PRIORITY: Record<string, number> = {
   Online: 0,
@@ -226,32 +226,13 @@ function StatsCell({
 
 function AttackCell({
   target,
-  userEffTotal,
+  userLevel,
 }: {
   target: LevelingTarget;
-  userEffTotal: number;
+  userLevel: number;
 }) {
   if (target.statusState === "Hospital" || target.statusState === "loading" || target.statusState === "error") {
     return null;
-  }
-
-  const ratio = userEffTotal > 0 && target.targetTotal > 0
-    ? userEffTotal / target.targetTotal
-    : null;
-  const tooStrong = ratio !== null && ratio >= RATIO_LOCK;
-
-  if (tooStrong) {
-    return (
-      <div className="flex flex-col items-end gap-1">
-        <div className="flex items-center gap-1.5 px-2 py-1 rounded border border-muted/40 text-muted-foreground/40">
-          <Lock className="w-3 h-3" />
-          <span className="text-[10px] font-bold uppercase tracking-wider">Too Weak</span>
-        </div>
-        <span className="text-[10px] text-muted-foreground/35 text-right leading-tight max-w-[110px]">
-          They're {ratio.toFixed(0)}× weaker — little XP gain
-        </span>
-      </div>
-    );
   }
 
   return (
@@ -398,17 +379,16 @@ export default function LevelingTargets() {
   const attackableCount = targets.filter((t) => t.statusState === "Okay").length;
   const hospitalCount = targets.filter((t) => t.statusState === "Hospital").length;
   const loadingCount = targets.filter((t) => t.statusState === "loading").length;
-  const lockedCount = targets.filter((t) => {
-    if (!userEffTotal || !t.targetTotal) return false;
-    return userEffTotal / t.targetTotal >= RATIO_LOCK;
-  }).length;
+  const userLevel = userData?.level ?? 0;
+  const lockedCount = targets.filter((t) =>
+    userLevel > 0 && t.level > 0 && t.level < userLevel * LEVEL_LOCK,
+  ).length;
 
   const displayedTargets = sortedTargets.filter((t) => {
     if (hiddenCategories.has("hospital") && t.statusState === "Hospital") return false;
     if (hiddenCategories.has("attackable") && t.statusState === "Okay") return false;
     if (hiddenCategories.has("tooWeak")) {
-      const ratio = userEffTotal > 0 && t.targetTotal > 0 ? userEffTotal / t.targetTotal : null;
-      if (ratio !== null && ratio >= RATIO_LOCK) return false;
+      if (userLevel > 0 && t.level > 0 && t.level < userLevel * LEVEL_LOCK) return false;
     }
     return true;
   });
@@ -489,7 +469,7 @@ export default function LevelingTargets() {
           {lockedCount > 0 && (
             <span className="flex items-center gap-1 text-red-400/80 font-medium ml-auto">
               <Lock className="w-3 h-3" />
-              {lockedCount} {lockedCount === 1 ? "target" : "targets"} too weak to fight
+              {lockedCount} {lockedCount === 1 ? "target" : "targets"} too low-level for XP
             </span>
           )}
         </div>
@@ -678,7 +658,7 @@ export default function LevelingTargets() {
                 )}
               >
                 <Lock className="w-3 h-3 flex-shrink-0" />
-                {lockedCount} too weak
+                {lockedCount} low level
               </button>
             )}
             {loadingCount > 0 && (
@@ -746,10 +726,7 @@ export default function LevelingTargets() {
                   </thead>
                   <tbody>
                     {displayedTargets.map((target, i) => {
-                      const ratio = userEffTotal > 0 && target.targetTotal > 0
-                        ? userEffTotal / target.targetTotal
-                        : null;
-                      const tooStrong = ratio !== null && ratio >= RATIO_LOCK;
+                      const tooStrong = userLevel > 0 && target.level > 0 && target.level < userLevel * LEVEL_LOCK;
 
                       return (
                         <tr
@@ -811,7 +788,7 @@ export default function LevelingTargets() {
 
                           {/* Attack */}
                           <td className="px-4 py-3 text-right">
-                            <AttackCell target={target} userEffTotal={userEffTotal} />
+                            <AttackCell target={target} userLevel={userLevel} />
                           </td>
                         </tr>
                       );
@@ -824,7 +801,7 @@ export default function LevelingTargets() {
                 <div className="px-4 py-2 border-t border-border/20 bg-muted/10">
                   <p className="text-[10px] text-muted-foreground/35">
                     Fetch again to refresh status. Countdowns update every 30s.
-                    Attack is blocked when your stats are {RATIO_LOCK}× higher than the target — little XP gain for you.
+                    Low-level targets (under {Math.round(LEVEL_LOCK * 100)}% of your level) are dimmed — XP scales with target level, so they pay little. Attacking is never blocked.
                     Stats source:{" "}
                     <a
                       href="https://www.torn.com/forums.php#/p=threads&f=61&t=16034448&b=0&a=0&to=18301173"
