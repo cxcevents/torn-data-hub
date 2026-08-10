@@ -67,6 +67,8 @@ export interface LevelingState {
   checked: number;
   targets: LevelingTarget[];
   error: string | null;
+  /** Set when the current results were restored from localStorage (ms epoch of the original fetch). */
+  cachedAt: number | null;
 }
 
 const INITIAL: LevelingState = {
@@ -75,7 +77,37 @@ const INITIAL: LevelingState = {
   checked: 0,
   targets: [],
   error: null,
+  cachedAt: null,
 };
+
+const CACHE_KEY = "tdh_leveling_results_v1";
+const CACHE_TTL = 60 * 60 * 1000; // results older than 1h are discarded
+
+function loadCachedState(): LevelingState {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return INITIAL;
+    const c = JSON.parse(raw) as { at: number; targets: LevelingTarget[] };
+    if (!c?.at || !Array.isArray(c.targets) || c.targets.length === 0) return INITIAL;
+    if (Date.now() - c.at > CACHE_TTL) { localStorage.removeItem(CACHE_KEY); return INITIAL; }
+    return {
+      phase: "done",
+      total: c.targets.length,
+      checked: c.targets.length,
+      targets: c.targets,
+      error: null,
+      cachedAt: c.at,
+    };
+  } catch {
+    return INITIAL;
+  }
+}
+
+function saveCache(targets: LevelingTarget[]) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), targets }));
+  } catch {}
+}
 
 function sleep(ms: number) {
   return new Promise<void>((r) => setTimeout(r, ms));
@@ -115,7 +147,7 @@ function makeLoadingTarget(entry: number | BaldrEntry): LevelingTarget {
 }
 
 export function useLevelingTargets(apiKey: string | null) {
-  const [state, setState] = useState<LevelingState>(INITIAL);
+  const [state, setState] = useState<LevelingState>(loadCachedState);
   const cancelledRef = useRef(false);
   const dataRef = useRef<BaldrData | null>(null);
 
@@ -125,6 +157,7 @@ export function useLevelingTargets(apiKey: string | null) {
 
   const reset = useCallback(() => {
     cancelledRef.current = true;
+    try { localStorage.removeItem(CACHE_KEY); } catch {}
     setState(INITIAL);
   }, []);
 
@@ -133,7 +166,7 @@ export function useLevelingTargets(apiKey: string | null) {
       if (!apiKey || listNames.length === 0) return;
 
       cancelledRef.current = false;
-      setState({ phase: "loading", total: 0, checked: 0, targets: [], error: null });
+      setState({ phase: "loading", total: 0, checked: 0, targets: [], error: null, cachedAt: null });
 
       try {
         let data = dataRef.current;
@@ -189,6 +222,7 @@ export function useLevelingTargets(apiKey: string | null) {
           checked: 0,
           targets: [...targets],
           error: null,
+          cachedAt: null,
         });
 
         for (let i = 0; i < targets.length; i++) {
@@ -226,6 +260,7 @@ export function useLevelingTargets(apiKey: string | null) {
           setState((s) => ({ ...s, checked: i + 1, targets: [...targets] }));
         }
 
+        saveCache(targets);
         setState((s) => ({ ...s, phase: "done" }));
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : "Unknown error";

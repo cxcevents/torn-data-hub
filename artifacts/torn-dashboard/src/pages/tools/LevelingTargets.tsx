@@ -271,7 +271,7 @@ export default function LevelingTargets() {
   const { data: userData } = useTornUser(apiKey);
   const { computeBonus } = useEnhancerActivations();
   const { state, fetchLists, cancel, reset } = useLevelingTargets(apiKey);
-  const { phase, total, checked, targets, error } = state;
+  const { phase, total, checked, targets, error, cachedAt } = state;
 
   const [selectedLists, setSelectedLists] = useState<string[]>(loadSavedLists);
   const [sortKey, setSortKey] = useState<SortKey>("status");
@@ -800,6 +800,11 @@ export default function LevelingTargets() {
               {phase === "done" && (
                 <div className="px-4 py-2 border-t border-border/20 bg-muted/10">
                   <p className="text-[10px] text-muted-foreground/35">
+                    {cachedAt !== null && (
+                      <span className="text-amber-400/60 font-bold">
+                        Restored from a fetch {Math.max(1, Math.round((nowMs - cachedAt) / 60000))}m ago — statuses may be stale; fetch again for live data.{" "}
+                      </span>
+                    )}
                     Fetch again to refresh status. Countdowns update every 30s.
                     Low-level targets (under {Math.round(LEVEL_LOCK * 100)}% of your level) are dimmed — XP scales with target level, so they pay little. Attacking is never blocked.
                     Stats source:{" "}
