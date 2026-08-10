@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Torn Data Hub",
-  "version": "3.3.4",
-  "description": "Torn Data Hub overlays for torn.com — Xanax tracker, refills, effective battle stats, gym efficiency, and a live vitals toolbar icon.",
+  "version": "3.3.5",
+  "description": "Torn Data Hub overlays for torn.com — Xanax tracker, refills, effective battle stats, gym efficiency, and live vitals icon.",
   "permissions": ["storage", "alarms"],
   "background": { "service_worker": "background.js" },
   "host_permissions": ["https://api.torn.com/*"],
