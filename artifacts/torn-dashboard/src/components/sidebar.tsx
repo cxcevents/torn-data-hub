@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import {
   LayoutDashboard, Settings, Code, Users, Wrench, TrendingUp,
-  ChevronLeft, ChevronRight, ChevronDown, Shield, Chrome, Smartphone,
+  ChevronLeft, ChevronRight, ChevronDown, Shield, Chrome, Smartphone, BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -149,6 +149,13 @@ export function Sidebar({ isAdmin }: SidebarProps) {
             )}
           </AnimatePresence>
         </div>
+
+        <SidebarLink
+          href="/guides"
+          icon={<BookOpen className="w-4 h-4" />}
+          label="Guides"
+          collapsed={collapsed}
+        />
       </nav>
       {/* ── Utility nav (bottom-anchored) ── */}
       <div className="p-2 border-t border-border/50 space-y-0.5">

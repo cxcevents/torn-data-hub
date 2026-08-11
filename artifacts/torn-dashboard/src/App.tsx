@@ -9,6 +9,7 @@ import Settings from "@/pages/Settings";
 import Raw from "@/pages/Raw";
 import Extension from "@/pages/Extension";
 import PdaPlugin from "@/pages/PdaPlugin";
+import Guides from "@/pages/Guides";
 import PiMarriageScout from "@/pages/tools/PiMarriageScout";
 import LevelingTargets from "@/pages/tools/LevelingTargets";
 import Admin from "@/pages/Admin";
@@ -25,6 +26,7 @@ function Router() {
         <Route path="/raw" component={Raw} />
         <Route path="/chrome-extension" component={Extension} />
         <Route path="/pda-plugin" component={PdaPlugin} />
+        <Route path="/guides" component={Guides} />
         <Route path="/tools/pi-scout" component={PiMarriageScout} />
         <Route path="/tools/leveling-targets" component={LevelingTargets} />
         <Route path="/admin" component={Admin} />
