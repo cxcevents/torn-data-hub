@@ -14,25 +14,18 @@ import {
 
 const ADMIN_PLAYER_ID = 2032555;
 
-// Very small markdown-ish renderer: # headings, - bullets, blank-line paragraphs.
+// Guide bodies are sanitized HTML from the server (rich text editor).
+// Legacy plain-text guides fall back to paragraph splitting.
 function GuideBody({ text }: { text: string }) {
+  if (/<[a-z][\s\S]*>/i.test(text)) {
+    return <div className="guide-prose" dangerouslySetInnerHTML={{ __html: text }} />;
+  }
   const blocks = text.replace(/\r\n/g, "\n").split(/\n{2,}/);
   return (
     <div className="space-y-4">
-      {blocks.map((block, i) => {
-        const lines = block.split("\n");
-        if (lines.every((l) => l.trim().startsWith("- "))) {
-          return (
-            <ul key={i} className="list-disc pl-5 space-y-1 text-sm leading-relaxed">
-              {lines.map((l, j) => <li key={j}>{l.trim().slice(2)}</li>)}
-            </ul>
-          );
-        }
-        if (lines[0].startsWith("### ")) return <h4 key={i} className="font-semibold">{lines[0].slice(4)}</h4>;
-        if (lines[0].startsWith("## ")) return <h3 key={i} className="font-semibold text-lg">{lines[0].slice(3)}</h3>;
-        if (lines[0].startsWith("# ")) return <h2 key={i} className="font-bold text-xl">{lines[0].slice(2)}</h2>;
-        return <p key={i} className="text-sm leading-relaxed whitespace-pre-wrap">{block}</p>;
-      })}
+      {blocks.map((block, i) => (
+        <p key={i} className="text-sm leading-relaxed whitespace-pre-wrap">{block}</p>
+      ))}
     </div>
   );
 }

@@ -2,7 +2,26 @@ import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { db, guidesTable, guideVotesTable, guideCommentsTable } from "@workspace/db";
 import { and, eq, sql, desc, inArray } from "drizzle-orm";
+import sanitizeHtml from "sanitize-html";
 import { verifyTornKey, ADMIN_PLAYER_ID } from "../lib/torn-verify";
+
+// Guide bodies are rich HTML from the dashboard editor (or pasted content).
+// Allow basic formatting only; everything else (scripts, styles, images) is stripped.
+function cleanGuideHtml(html: string): string {
+  return sanitizeHtml(html, {
+    allowedTags: ["h2", "h3", "p", "br", "strong", "b", "em", "i", "u", "s", "ul", "ol", "li", "blockquote", "a", "hr"],
+    allowedAttributes: { a: ["href"] },
+    allowedSchemes: ["http", "https"],
+    transformTags: { h1: "h2", h4: "h3", h5: "h3", h6: "h3" },
+  });
+}
+
+function plainTextOf(html: string): string {
+  // Insert spaces at tag boundaries so "…heading</h2><p>Text…" doesn't glue words together.
+  return sanitizeHtml(html.replace(/></g, "> <"), { allowedTags: [], allowedAttributes: {} })
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 const router: IRouter = Router();
 
@@ -34,7 +53,7 @@ async function scoresFor(guideIds: number[]) {
 }
 
 function excerpt(body: string): string {
-  const text = body.replace(/^#+\s*/gm, "").replace(/^-\s*/gm, "").replace(/\s+/g, " ").trim();
+  const text = plainTextOf(body).replace(/^#+\s*/gm, "").replace(/^-\s*/gm, "");
   return text.length > 180 ? `${text.slice(0, 177)}…` : text;
 }
 
@@ -109,7 +128,12 @@ router.get("/guides/:slug", async (req, res) => {
 const SubmitBody = KeyBody.extend({
   title: z.string().trim().min(8).max(120),
   summary: z.string().trim().max(300).optional().default(""),
-  body: z.string().trim().min(100).max(50000),
+  body: z
+    .string()
+    .trim()
+    .max(200000)
+    .transform(cleanGuideHtml)
+    .refine((html) => plainTextOf(html).length >= 100, { message: "Guide text must be at least 100 characters" }),
   category: z.enum(CATEGORIES),
   audience: z.enum(AUDIENCES),
 });

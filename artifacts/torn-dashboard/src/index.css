@@ -143,6 +143,18 @@
   --sidebar-ring: 350 85% 45%;
 }
 
+/* Rich text (guides) — editor content and rendered guide bodies */
+.guide-prose h2 { @apply text-lg font-semibold mt-5 mb-2 first:mt-0; }
+.guide-prose h3 { @apply font-semibold mt-4 mb-1.5 first:mt-0; }
+.guide-prose p { @apply text-sm leading-relaxed mb-3 last:mb-0; }
+.guide-prose ul { @apply list-disc pl-5 mb-3 space-y-1 text-sm leading-relaxed; }
+.guide-prose ol { @apply list-decimal pl-5 mb-3 space-y-1 text-sm leading-relaxed; }
+.guide-prose blockquote { @apply border-l-2 border-primary/50 pl-3 text-sm text-muted-foreground italic mb-3; }
+.guide-prose strong { @apply font-semibold; }
+.guide-prose u { text-underline-offset: 2px; }
+.guide-prose a { @apply text-primary underline underline-offset-2; }
+.guide-prose:focus { outline: none; }
+
 @layer base {
   * {
     @apply border-border;

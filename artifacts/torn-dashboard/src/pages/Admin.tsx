@@ -226,9 +226,10 @@ export default function Admin() {
               {expandedGuide === g.id ? "Hide full guide" : "Read full guide"}
             </button>
             {expandedGuide === g.id && (
-              <pre className="text-xs whitespace-pre-wrap bg-background rounded-md border border-border/60 p-3 max-h-96 overflow-y-auto font-sans">
-                {g.body}
-              </pre>
+              <div
+                className="guide-prose text-xs bg-background rounded-md border border-border/60 p-3 max-h-96 overflow-y-auto"
+                dangerouslySetInnerHTML={{ __html: g.body }}
+              />
             )}
           </div>
         ))}

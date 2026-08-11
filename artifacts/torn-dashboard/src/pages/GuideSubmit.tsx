@@ -8,6 +8,16 @@ import { useApiKey } from "@/hooks/use-api-key";
 import { useTornUser } from "@/hooks/use-torn-user";
 import { CATEGORIES, AUDIENCES, type GuideCategory, type GuideAudience } from "@/lib/guides";
 import { submitGuide, editGuide, fetchGuide } from "@/lib/guides-api";
+import RichTextEditor from "@/components/rich-text-editor";
+
+// Legacy guides were stored as plain text; wrap them in paragraphs for the editor.
+function toEditorHtml(body: string): string {
+  if (/<[a-z][\s\S]*>/i.test(body)) return body;
+  return body
+    .split(/\n{2,}/)
+    .map((b) => `<p>${b.replace(/\n/g, "<br>")}</p>`)
+    .join("");
+}
 
 const ADMIN_PLAYER_ID = 2032555;
 
@@ -22,6 +32,7 @@ export default function GuideSubmit() {
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [body, setBody] = useState("");
+  const [bodyText, setBodyText] = useState("");
   const [category, setCategory] = useState<GuideCategory>("getting-started");
   const [audience, setAudience] = useState<GuideAudience>("all");
   const [busy, setBusy] = useState(false);
@@ -37,7 +48,9 @@ export default function GuideSubmit() {
         setGuideId(guide.id);
         setTitle(guide.title);
         setSummary(guide.summary ?? "");
-        setBody(guide.body);
+        const html = toEditorHtml(guide.body);
+        setBody(html);
+        setBodyText(guide.body.replace(/<[^>]+>/g, " ").trim());
         setCategory(guide.category);
         setAudience(guide.audience);
       })
@@ -148,15 +161,17 @@ export default function GuideSubmit() {
 
           <div className="space-y-1.5">
             <label className="text-sm font-medium">Guide content</label>
-            <textarea className={cn(field, "min-h-[300px] resize-y font-mono text-xs leading-relaxed")} value={body} onChange={(e) => setBody(e.target.value)}
-              placeholder={"Write the full guide here (at least 100 characters).\n\nPlain text is fine — blank lines separate paragraphs. Lines starting with # become headings, lines starting with - become bullet points."}
-              data-testid="input-guide-body" />
-            <p className="text-xs text-muted-foreground">{body.length.toLocaleString()} characters (minimum 100)</p>
+            <RichTextEditor
+              value={body}
+              onChange={(html, text) => { setBody(html); setBodyText(text); }}
+              placeholder="Write the full guide here — or paste from an existing guide; formatting like headings, bold, and lists comes with it."
+            />
+            <p className="text-xs text-muted-foreground">{bodyText.trim().length.toLocaleString()} characters (minimum 100)</p>
           </div>
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <Button onClick={submit} disabled={busy || title.trim().length < 8 || body.trim().length < 100} data-testid="button-submit-guide">
+          <Button onClick={submit} disabled={busy || title.trim().length < 8 || bodyText.trim().length < 100} data-testid="button-submit-guide">
             <Send className="w-4 h-4 mr-2" />
             {busy ? "Saving…" : isEdit ? "Save changes" : "Submit for review"}
           </Button>
