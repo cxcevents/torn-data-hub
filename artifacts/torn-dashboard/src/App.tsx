@@ -14,6 +14,7 @@ import GuideSubmit from "@/pages/GuideSubmit";
 import GuideDetail from "@/pages/GuideDetail";
 import PiMarriageScout from "@/pages/tools/PiMarriageScout";
 import LevelingTargets from "@/pages/tools/LevelingTargets";
+import MeritScout from "@/pages/tools/MeritScout";
 import Admin from "@/pages/Admin";
 import { Layout } from "@/components/layout";
 
@@ -33,6 +34,7 @@ function Router() {
         <Route path="/guides/:slug" component={GuideDetail} />
         <Route path="/tools/pi-scout" component={PiMarriageScout} />
         <Route path="/tools/leveling-targets" component={LevelingTargets} />
+        <Route path="/tools/merit-scout" component={MeritScout} />
         <Route path="/admin" component={Admin} />
         <Route component={NotFound} />
       </Switch>

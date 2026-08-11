@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import {
-  LayoutDashboard, Settings, Code, Users, Wrench, TrendingUp,
+  LayoutDashboard, Settings, Code, Users, Wrench, TrendingUp, Trophy,
   ChevronLeft, ChevronRight, ChevronDown, Shield, Chrome, Smartphone, BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -134,6 +134,13 @@ export function Sidebar({ isAdmin }: SidebarProps) {
                     href="/tools/leveling-targets"
                     icon={<TrendingUp className="w-4 h-4" />}
                     label="Leveling Targets"
+                    collapsed={collapsed}
+                    indent
+                  />
+                  <SidebarLink
+                    href="/tools/merit-scout"
+                    icon={<Trophy className="w-4 h-4" />}
+                    label="Merit Scout"
                     collapsed={collapsed}
                     indent
                   />
