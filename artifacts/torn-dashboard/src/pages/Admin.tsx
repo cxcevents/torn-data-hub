@@ -2,9 +2,11 @@ import { useEffect, useState, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useApiKey } from "@/hooks/use-api-key";
 import { useTornUser } from "@/hooks/use-torn-user";
-import { Shield, RefreshCw, ExternalLink, User, Clock } from "lucide-react";
+import { Shield, RefreshCw, ExternalLink, User, Clock, BookOpen, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { adminListPending, adminReview, type GuideDetail } from "@/lib/guides-api";
+import { CATEGORIES, AUDIENCES } from "@/lib/guides";
 
 const ADMIN_PLAYER_ID = 2032555;
 const REFRESH_INTERVAL_MS = 30_000;
@@ -113,6 +115,36 @@ export default function Admin() {
     return () => clearInterval(timer);
   }, [isAdmin, apiKey, fetchSessions]);
 
+  // ── Pending guide submissions ──
+  const [pendingGuides, setPendingGuides] = useState<(GuideDetail & { status: string })[]>([]);
+  const [expandedGuide, setExpandedGuide] = useState<number | null>(null);
+  const [guideError, setGuideError] = useState<string | null>(null);
+
+  const fetchPending = useCallback(async () => {
+    if (!apiKey) return;
+    try {
+      setPendingGuides(await adminListPending(apiKey));
+      setGuideError(null);
+    } catch (e) {
+      setGuideError((e as Error).message);
+    }
+  }, [apiKey]);
+
+  useEffect(() => {
+    if (!isAdmin || !apiKey) return;
+    fetchPending();
+  }, [isAdmin, apiKey, fetchPending]);
+
+  const review = async (id: number, action: "approve" | "reject") => {
+    if (!apiKey) return;
+    try {
+      await adminReview(id, apiKey, action);
+      setPendingGuides((g) => g.filter((x) => x.id !== id));
+    } catch (e) {
+      setGuideError((e as Error).message);
+    }
+  };
+
   if (userLoading || !data) return null;
   if (!isAdmin) return null;
 
@@ -150,6 +182,57 @@ export default function Admin() {
           {error}
         </div>
       )}
+
+      {/* Pending guide submissions */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <BookOpen className="w-4 h-4 text-primary" />
+          <h2 className="font-semibold">Guide submissions</h2>
+          <span className="text-xs text-muted-foreground">{pendingGuides.length} pending</span>
+        </div>
+        {guideError && <p className="text-sm text-destructive">{guideError}</p>}
+        {pendingGuides.length === 0 && !guideError && (
+          <p className="text-sm text-muted-foreground">No guides waiting for review.</p>
+        )}
+        {pendingGuides.map((g) => (
+          <div key={g.id} className="rounded-md border border-border bg-card p-4 space-y-2">
+            <div className="flex items-start justify-between gap-3 flex-wrap">
+              <div>
+                <div className="font-medium">{g.title}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {CATEGORIES.find((c) => c.id === g.category)?.label} ·{" "}
+                  {AUDIENCES.find((a) => a.id === g.audience)?.label} · by{" "}
+                  <a href={`https://www.torn.com/profiles.php?XID=${g.authorId}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    {g.authorName} [{g.authorId}]
+                  </a>{" "}
+                  · {new Date(g.createdAt).toLocaleString()}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={() => review(g.id, "approve")} data-testid={`button-approve-${g.id}`}>
+                  <Check className="w-4 h-4 mr-1" /> Approve
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => review(g.id, "reject")} data-testid={`button-reject-${g.id}`}>
+                  <X className="w-4 h-4 mr-1" /> Reject
+                </Button>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">{g.summary}</p>
+            <button
+              onClick={() => setExpandedGuide(expandedGuide === g.id ? null : g.id)}
+              className="text-xs text-primary hover:underline"
+              data-testid={`button-expand-${g.id}`}
+            >
+              {expandedGuide === g.id ? "Hide full guide" : "Read full guide"}
+            </button>
+            {expandedGuide === g.id && (
+              <pre className="text-xs whitespace-pre-wrap bg-background rounded-md border border-border/60 p-3 max-h-96 overflow-y-auto font-sans">
+                {g.body}
+              </pre>
+            )}
+          </div>
+        ))}
+      </div>
 
       {/* Stats row */}
       {total !== null && (

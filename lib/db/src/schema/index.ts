@@ -19,3 +19,4 @@
 
 export * from "./visitor-history";
 export * from "./xanax-history";
+export * from "./guides";
