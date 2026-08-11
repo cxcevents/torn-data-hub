@@ -114,8 +114,12 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
       handlePaste: (_view, event) => {
         const html = event.clipboardData?.getData("text/html");
         const text = event.clipboardData?.getData("text/plain");
-        // Only step in for plain-text pastes that look like Markdown.
-        if (!html && text && (looksLikeMarkdown(text) || hasTabTable(text))) {
+        // Step in when the paste is plain text that looks like Markdown, OR
+        // when the clipboard's HTML version lost its tables (ChatGPT/Docs often
+        // ship tables as tab-separated or pipe-separated text in the HTML too).
+        const htmlHasRealTable = !!html && /<table/i.test(html);
+        const textHasTable = !!text && (hasTabTable(text) || /^\s*\|.+\|\s*$/m.test(text));
+        if (text && ((!html && looksLikeMarkdown(text)) || (textHasTable && !htmlHasRealTable))) {
           event.preventDefault();
           const converted = plainTextToHtml(text);
           // Defer so we can use the editor instance from the outer scope.
