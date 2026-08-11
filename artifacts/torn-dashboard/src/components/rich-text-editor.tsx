@@ -1,5 +1,6 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { TableKit } from "@tiptap/extension-table";
 import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Heading2, Heading3, Quote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect } from "react";
@@ -33,6 +34,8 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
     extensions: [
       // StarterKit already bundles underline and link in TipTap v3.
       StarterKit.configure({ heading: { levels: [2, 3] }, link: { openOnClick: false } }),
+      // Table support so pasted tables (from forums, wiki, docs) keep their structure.
+      TableKit.configure({ table: { resizable: false } }),
     ],
     content: value,
     editorProps: {

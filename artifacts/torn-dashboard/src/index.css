@@ -153,6 +153,9 @@
 .guide-prose strong { @apply font-semibold; }
 .guide-prose u { text-underline-offset: 2px; }
 .guide-prose a { @apply text-primary underline underline-offset-2; }
+.guide-prose table { @apply w-full text-sm mb-3 border-collapse; }
+.guide-prose th { @apply border border-border bg-muted/50 px-2.5 py-1.5 text-left font-semibold; }
+.guide-prose td { @apply border border-border px-2.5 py-1.5 align-top; }
 .guide-prose:focus { outline: none; }
 
 @layer base {

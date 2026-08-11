@@ -9,8 +9,8 @@ import { verifyTornKey, ADMIN_PLAYER_ID } from "../lib/torn-verify";
 // Allow basic formatting only; everything else (scripts, styles, images) is stripped.
 function cleanGuideHtml(html: string): string {
   return sanitizeHtml(html, {
-    allowedTags: ["h2", "h3", "p", "br", "strong", "b", "em", "i", "u", "s", "ul", "ol", "li", "blockquote", "a", "hr"],
-    allowedAttributes: { a: ["href"] },
+    allowedTags: ["h2", "h3", "p", "br", "strong", "b", "em", "i", "u", "s", "ul", "ol", "li", "blockquote", "a", "hr", "table", "thead", "tbody", "tr", "th", "td"],
+    allowedAttributes: { a: ["href"], th: ["colspan", "rowspan"], td: ["colspan", "rowspan"] },
     allowedSchemes: ["http", "https"],
     transformTags: { h1: "h2", h4: "h3", h5: "h3", h6: "h3" },
   });
