@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
 const SIDEBAR_KEY = "torn_sidebar_collapsed";
-const TOOLS_KEY = "torn_sidebar_tools_open";
 
 interface SidebarLinkProps {
   href: string;
@@ -48,9 +47,8 @@ export function Sidebar({ isAdmin }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem(SIDEBAR_KEY) === "true"; } catch { return false; }
   });
-  const [toolsOpen, setToolsOpen] = useState(() => {
-    try { return localStorage.getItem(TOOLS_KEY) !== "false"; } catch { return true; }
-  });
+  // Always start with the tools section open; the toggle only lasts for the current visit.
+  const [toolsOpen, setToolsOpen] = useState(true);
 
   const toggleCollapse = () => {
     setCollapsed(prev => {
@@ -62,11 +60,7 @@ export function Sidebar({ isAdmin }: SidebarProps) {
 
   const toggleTools = () => {
     if (collapsed) { toggleCollapse(); return; }
-    setToolsOpen(prev => {
-      const next = !prev;
-      try { localStorage.setItem(TOOLS_KEY, String(next)); } catch {}
-      return next;
-    });
+    setToolsOpen(prev => !prev);
   };
 
   return (
@@ -114,7 +108,7 @@ export function Sidebar({ isAdmin }: SidebarProps) {
             </span>
             {!collapsed && (
               <>
-                <span className="flex-1 text-left truncate">N00b T00ls</span>
+                <span className="flex-1 text-left truncate">T00ls</span>
                 <motion.span
                   animate={{ rotate: toolsOpen ? 0 : -90 }}
                   transition={{ duration: 0.15 }}
@@ -156,7 +150,6 @@ export function Sidebar({ isAdmin }: SidebarProps) {
           </AnimatePresence>
         </div>
       </nav>
-
       {/* ── Utility nav (bottom-anchored) ── */}
       <div className="p-2 border-t border-border/50 space-y-0.5">
         {isAdmin && (
