@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useLocation, useRoute } from "wouter";
-import { ArrowLeft, ThumbsUp, ThumbsDown, MessageSquare, Send, Trash2, Sprout, Sword } from "lucide-react";
+import { ArrowLeft, ThumbsUp, ThumbsDown, MessageSquare, Send, Trash2, Sprout, Sword, Pencil } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -129,7 +129,14 @@ export default function GuideDetail() {
             {audLabel}
           </span>
         </div>
-        <h1 className="text-2xl font-bold">{guide.title}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-bold">{guide.title}</h1>
+          {(user?.player_id === guide.authorId || isAdmin) && (
+            <Button variant="outline" size="sm" onClick={() => navigate(`/guides/${guide.slug}/edit`)} data-testid="button-edit-guide">
+              <Pencil className="w-3.5 h-3.5 mr-2" /> Edit
+            </Button>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground mt-1">
           by{" "}
           <a href={`https://www.torn.com/profiles.php?XID=${guide.authorId}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">

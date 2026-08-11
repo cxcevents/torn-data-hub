@@ -5,7 +5,7 @@ export const guidesTable = pgTable("guides", {
   id: serial("id").primaryKey(),
   slug: text("slug").notNull().unique(),
   title: text("title").notNull(),
-  summary: text("summary").notNull(),
+  summary: text("summary"), // optional — list pages fall back to a body excerpt
   body: text("body").notNull(), // markdown-ish plain text
   category: text("category").notNull(), // getting-started | leveling | faction | money | drugs-boosters | combat | misc
   audience: text("audience").notNull(), // new | established | all

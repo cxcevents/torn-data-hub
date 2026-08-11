@@ -33,6 +33,11 @@ async function scoresFor(guideIds: number[]) {
   return new Map(rows.map((r) => [r.guideId, { up: Number(r.up), down: Number(r.down) }]));
 }
 
+function excerpt(body: string): string {
+  const text = body.replace(/^#+\s*/gm, "").replace(/^-\s*/gm, "").replace(/\s+/g, " ").trim();
+  return text.length > 180 ? `${text.slice(0, 177)}…` : text;
+}
+
 // ── List approved guides ──
 router.get("/guides", async (_req, res) => {
   const guides = await db
@@ -54,8 +59,9 @@ router.get("/guides", async (_req, res) => {
   const commentCounts = new Map(counts.map((c) => [c.guideId, Number(c.n)]));
 
   res.json({
-    guides: guides.map(({ body: _body, ...g }) => ({
+    guides: guides.map(({ body, ...g }) => ({
       ...g,
+      summary: g.summary || excerpt(body),
       score: (scores.get(g.id)?.up ?? 0) - (scores.get(g.id)?.down ?? 0),
       comments: commentCounts.get(g.id) ?? 0,
     })),
@@ -102,7 +108,7 @@ router.get("/guides/:slug", async (req, res) => {
 // ── Submit a guide (goes to pending queue) ──
 const SubmitBody = KeyBody.extend({
   title: z.string().trim().min(8).max(120),
-  summary: z.string().trim().min(20).max(300),
+  summary: z.string().trim().max(300).optional().default(""),
   body: z.string().trim().min(100).max(50000),
   category: z.enum(CATEGORIES),
   audience: z.enum(AUDIENCES),
@@ -129,7 +135,7 @@ router.post("/guides", async (req, res) => {
     .values({
       slug,
       title: parsed.data.title,
-      summary: parsed.data.summary,
+      summary: parsed.data.summary || null,
       body: parsed.data.body,
       category: parsed.data.category,
       audience: parsed.data.audience,
@@ -140,6 +146,45 @@ router.post("/guides", async (req, res) => {
     .returning();
 
   res.json({ ok: true, id: row.id, slug: row.slug });
+});
+
+// ── Edit own guide (author only; edited guides go back to the review queue) ──
+router.post("/guides/:id/edit", async (req, res) => {
+  const parsed = SubmitBody.safeParse(req.body);
+  const guideId = Number(req.params.id);
+  if (!parsed.success || !Number.isInteger(guideId)) {
+    res.status(400).json({ error: parsed.success ? "Invalid guide" : parsed.error.issues[0]?.message ?? "Invalid submission" });
+    return;
+  }
+  const player = await verifyTornKey(parsed.data.apiKey);
+  if (!player) {
+    res.status(401).json({ error: "Could not verify your Torn API key" });
+    return;
+  }
+  const [guide] = await db.select().from(guidesTable).where(eq(guidesTable.id, guideId));
+  if (!guide) {
+    res.status(404).json({ error: "Guide not found" });
+    return;
+  }
+  if (guide.authorId !== player.playerId && player.playerId !== ADMIN_PLAYER_ID) {
+    res.status(403).json({ error: "Only the author can edit this guide" });
+    return;
+  }
+  // Admin edits stay live; author edits go back through review.
+  const nextStatus = player.playerId === ADMIN_PLAYER_ID ? guide.status : "pending";
+  const [row] = await db
+    .update(guidesTable)
+    .set({
+      title: parsed.data.title,
+      summary: parsed.data.summary || null,
+      body: parsed.data.body,
+      category: parsed.data.category,
+      audience: parsed.data.audience,
+      status: nextStatus,
+    })
+    .where(eq(guidesTable.id, guideId))
+    .returning();
+  res.json({ ok: true, slug: row.slug, status: row.status });
 });
 
 // ── Vote (value: 1, -1, or 0 to clear) ──

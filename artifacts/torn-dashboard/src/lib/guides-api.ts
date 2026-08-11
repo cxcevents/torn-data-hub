@@ -63,6 +63,26 @@ export async function submitGuide(input: {
   ) as Promise<{ ok: true; slug: string }>;
 }
 
+export async function editGuide(
+  id: number,
+  input: {
+    apiKey: string;
+    title: string;
+    summary: string;
+    body: string;
+    category: GuideCategory;
+    audience: GuideAudience;
+  },
+) {
+  return jsonOrThrow(
+    await fetch(`/api/guides/${id}/edit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  ) as Promise<{ ok: true; slug: string; status: string }>;
+}
+
 export async function voteGuide(id: number, apiKey: string, value: 1 | -1 | 0) {
   return jsonOrThrow(
     await fetch(`/api/guides/${id}/vote`, {

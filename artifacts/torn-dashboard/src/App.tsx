@@ -31,6 +31,7 @@ function Router() {
         <Route path="/pda-plugin" component={PdaPlugin} />
         <Route path="/guides" component={Guides} />
         <Route path="/guides/submit" component={GuideSubmit} />
+        <Route path="/guides/:slug/edit" component={GuideSubmit} />
         <Route path="/guides/:slug" component={GuideDetail} />
         <Route path="/tools/pi-scout" component={PiMarriageScout} />
         <Route path="/tools/leveling-targets" component={LevelingTargets} />
