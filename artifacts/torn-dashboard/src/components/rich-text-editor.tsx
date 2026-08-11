@@ -3,7 +3,24 @@ import StarterKit from "@tiptap/starter-kit";
 import { TableKit } from "@tiptap/extension-table";
 import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Heading2, Heading3, Quote } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { marked } from "marked";
+
+// ChatGPT (and many editors) put Markdown on the clipboard as plain text.
+// Detect it so pasted tables, headings, bold, and lists become real formatting.
+function looksLikeMarkdown(text: string): boolean {
+  return (
+    /^\s*\|.+\|\s*$/m.test(text) || // | table | rows |
+    /^\s*#{1,6}\s+\S/m.test(text) || // # headings
+    /\*\*[^*\n]+\*\*/.test(text) || // **bold**
+    /^\s*[-*]\s+\S/m.test(text) || // - bullets
+    /^\s*\d+\.\s+\S/m.test(text) // 1. numbered lists
+  );
+}
+
+function markdownToHtml(text: string): string {
+  return marked.parse(text, { async: false, gfm: true, breaks: true }) as string;
+}
 
 interface Props {
   value: string; // HTML
@@ -30,6 +47,7 @@ function ToolbarButton({ active, onClick, title, children }: {
 }
 
 export default function RichTextEditor({ value, onChange, placeholder }: Props) {
+  const editorRefHolder = useRef<ReturnType<typeof useEditor> | null>(null);
   const editor = useEditor({
     extensions: [
       // StarterKit already bundles underline and link in TipTap v3.
@@ -39,6 +57,21 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
     ],
     content: value,
     editorProps: {
+      handlePaste: (_view, event) => {
+        const html = event.clipboardData?.getData("text/html");
+        const text = event.clipboardData?.getData("text/plain");
+        // Only step in for plain-text pastes that look like Markdown.
+        if (!html && text && looksLikeMarkdown(text)) {
+          event.preventDefault();
+          const converted = markdownToHtml(text);
+          // Defer so we can use the editor instance from the outer scope.
+          window.setTimeout(() => {
+            editorRefHolder.current?.chain().focus().insertContent(converted).run();
+          }, 0);
+          return true;
+        }
+        return false;
+      },
       attributes: {
         class: "guide-prose min-h-[300px] px-3 py-2 text-sm outline-none",
         "data-placeholder": placeholder ?? "",
@@ -46,6 +79,8 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML(), editor.getText()),
   });
+
+  editorRefHolder.current = editor;
 
   // Sync external value into the editor exactly once when it changes from outside
   // (e.g. edit-mode prefill after async fetch).
