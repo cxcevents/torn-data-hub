@@ -6,8 +6,9 @@ import { cn } from "@/lib/utils";
 import { useEffect, useRef } from "react";
 import { marked } from "marked";
 
-// ChatGPT (and many editors) put Markdown on the clipboard as plain text.
-// Detect it so pasted tables, headings, bold, and lists become real formatting.
+// ChatGPT (and many editors) put Markdown or tab-separated tables on the
+// clipboard as plain text. Detect both so pasted tables, headings, bold, and
+// lists become real formatting.
 function looksLikeMarkdown(text: string): boolean {
   return (
     /^\s*\|.+\|\s*$/m.test(text) || // | table | rows |
@@ -18,8 +19,61 @@ function looksLikeMarkdown(text: string): boolean {
   );
 }
 
+function hasTabTable(text: string): boolean {
+  // Two or more consecutive lines containing tabs = a pasted table.
+  return /^[^\t\n]*\t[^\n]*\n[^\t\n]*\t[^\n]*$/m.test(text);
+}
+
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
 function markdownToHtml(text: string): string {
   return marked.parse(text, { async: false, gfm: true, breaks: true }) as string;
+}
+
+// Convert plain text to HTML: consecutive tab-separated lines become tables
+// (first row = header), everything else goes through the Markdown parser.
+function plainTextToHtml(text: string): string {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const out: string[] = [];
+  let buffer: string[] = [];
+  let tableRows: string[][] = [];
+
+  const flushText = () => {
+    const chunk = buffer.join("\n").trim();
+    if (chunk) out.push(markdownToHtml(chunk));
+    buffer = [];
+  };
+  const flushTable = () => {
+    if (tableRows.length === 1) {
+      // A lone tab line isn't a table — treat as text.
+      buffer.push(tableRows[0].join(" "));
+    } else if (tableRows.length > 1) {
+      const cols = Math.max(...tableRows.map((r) => r.length));
+      const row = (cells: string[], tag: string) =>
+        `<tr>${Array.from({ length: cols }, (_, i) => `<${tag}>${escapeHtml(cells[i] ?? "")}</${tag}>`).join("")}</tr>`;
+      out.push(
+        `<table><thead>${row(tableRows[0], "th")}</thead><tbody>${tableRows
+          .slice(1)
+          .map((r) => row(r, "td"))
+          .join("")}</tbody></table>`,
+      );
+    }
+    tableRows = [];
+  };
+
+  for (const line of lines) {
+    if (line.includes("\t")) {
+      flushText();
+      tableRows.push(line.split("\t").map((c) => c.trim()));
+    } else {
+      flushTable();
+      buffer.push(line);
+    }
+  }
+  flushText();
+  flushTable();
+  return out.join("");
 }
 
 interface Props {
@@ -61,9 +115,9 @@ export default function RichTextEditor({ value, onChange, placeholder }: Props) 
         const html = event.clipboardData?.getData("text/html");
         const text = event.clipboardData?.getData("text/plain");
         // Only step in for plain-text pastes that look like Markdown.
-        if (!html && text && looksLikeMarkdown(text)) {
+        if (!html && text && (looksLikeMarkdown(text) || hasTabTable(text))) {
           event.preventDefault();
-          const converted = markdownToHtml(text);
+          const converted = plainTextToHtml(text);
           // Defer so we can use the editor instance from the outer scope.
           window.setTimeout(() => {
             editorRefHolder.current?.chain().focus().insertContent(converted).run();
