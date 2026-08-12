@@ -20,6 +20,12 @@ const STORAGE_KEY = "leveling_targets_lists_v2";
 // Attack gate: block attack when user is this many times stronger than target
 const LEVEL_LOCK = 0.25; // little XP when target level < 25% of yours
 
+// Players active within this window are probably no longer safe leveling
+// targets — they train, so old spy reports mislead. Hidden by default.
+const RECENT_ACTIVE_DAYS = 90;
+const isRecentlyActive = (t: LevelingTarget, nowUnix: number) =>
+  t.lastActionTimestamp > 0 && nowUnix - t.lastActionTimestamp < RECENT_ACTIVE_DAYS * 86_400;
+
 const LAST_ACTION_PRIORITY: Record<string, number> = {
   Online: 0,
   Idle: 1,
@@ -184,9 +190,11 @@ function LifeCell({ target }: { target: LevelingTarget }) {
 function StatsCell({
   target,
   userEffTotal,
+  staleSpy,
 }: {
   target: LevelingTarget;
   userEffTotal: number;
+  staleSpy?: boolean;
 }) {
   if (target.statusState === "loading" || !target.targetTotal) {
     return <span className="text-xs text-muted-foreground/25">—</span>;
@@ -224,6 +232,14 @@ function StatsCell({
             {ratio >= 10 ? `${Math.round(ratio)}×` : `${ratio.toFixed(1)}×`} weaker
           </span>
         ) : null}
+        {staleSpy && (
+          <span
+            title={`Active in the last ${RECENT_ACTIVE_DAYS} days — spy report may be outdated.`}
+            className="text-[10px] font-bold text-amber-400/80 bg-amber-400/10 border border-amber-400/20 px-1.5 py-px rounded-full"
+          >
+            spy stale?
+          </span>
+        )}
       </div>
       {(target.targetStr > 0 || target.targetDef > 0 || target.targetSpd > 0 || target.targetDex > 0) && (
         <span className="text-[10px] text-muted-foreground/50 font-mono tabular-nums block">
@@ -288,7 +304,9 @@ export default function LevelingTargets() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [userSorted, setUserSorted] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(new Set());
+  const [hiddenCategories, setHiddenCategories] = useState<Set<string>>(
+    () => new Set(["recentlyActive"]),
+  );
 
   const isRunning = phase === "loading" || phase === "fetching";
   const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
@@ -393,6 +411,7 @@ export default function LevelingTargets() {
   const lockedCount = targets.filter((t) =>
     userLevel > 0 && t.level > 0 && t.level < userLevel * LEVEL_LOCK,
   ).length;
+  const recentActiveCount = targets.filter((t) => isRecentlyActive(t, nowUnix)).length;
 
   const displayedTargets = sortedTargets.filter((t) => {
     if (hiddenCategories.has("hospital") && t.statusState === "Hospital") return false;
@@ -400,6 +419,7 @@ export default function LevelingTargets() {
     if (hiddenCategories.has("tooWeak")) {
       if (userLevel > 0 && t.level > 0 && t.level < userLevel * LEVEL_LOCK) return false;
     }
+    if (hiddenCategories.has("recentlyActive") && isRecentlyActive(t, nowUnix)) return false;
     return true;
   });
 
@@ -674,6 +694,20 @@ export default function LevelingTargets() {
                 {lockedCount} low level
               </button>
             )}
+            {recentActiveCount > 0 && (
+              <button
+                onClick={() => toggleCategory("recentlyActive")}
+                title={`Active in the last ${RECENT_ACTIVE_DAYS} days — they likely train, so old spy stats mislead. Hidden by default.`}
+                className={cn(
+                  "text-xs font-medium px-2 py-0.5 rounded-full border transition-colors",
+                  hiddenCategories.has("recentlyActive")
+                    ? "text-amber-400/40 bg-amber-400/5 border-amber-400/10 line-through"
+                    : "text-amber-400 bg-amber-400/10 border-amber-400/20 hover:bg-amber-400/20",
+                )}
+              >
+                {recentActiveCount} active &lt;{RECENT_ACTIVE_DAYS}d
+              </button>
+            )}
             {loadingCount > 0 && (
               <span className="flex items-center gap-1 text-xs text-muted-foreground/40">
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -788,7 +822,7 @@ export default function LevelingTargets() {
 
                           {/* Stats vs Yours */}
                           <td className="px-4 py-3">
-                            <StatsCell target={target} userEffTotal={userEffTotal} />
+                            <StatsCell target={target} userEffTotal={userEffTotal} staleSpy={isRecentlyActive(target, nowUnix)} />
                           </td>
 
                           {/* Status */}
