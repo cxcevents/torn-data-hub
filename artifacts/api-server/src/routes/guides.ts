@@ -3,7 +3,8 @@ import { z } from "zod";
 import { db, guidesTable, guideVotesTable, guideCommentsTable } from "@workspace/db";
 import { and, eq, sql, desc, inArray } from "drizzle-orm";
 import sanitizeHtml from "sanitize-html";
-import { verifyTornKey, ADMIN_PLAYER_ID } from "../lib/torn-verify";
+import { verifyTornKey } from "../lib/torn-verify";
+import { isAdminPlayer } from "../lib/admins";
 
 // Guide bodies are rich HTML from the dashboard editor (or pasted content).
 // Allow basic formatting only; everything else (scripts, styles, images) is stripped.
@@ -190,12 +191,13 @@ router.post("/guides/:id/edit", async (req, res) => {
     res.status(404).json({ error: "Guide not found" });
     return;
   }
-  if (guide.authorId !== player.playerId && player.playerId !== ADMIN_PLAYER_ID) {
+  const editorIsAdmin = await isAdminPlayer(player.playerId);
+  if (guide.authorId !== player.playerId && !editorIsAdmin) {
     res.status(403).json({ error: "Only the author can edit this guide" });
     return;
   }
   // Admin edits stay live; author edits go back through review.
-  const nextStatus = player.playerId === ADMIN_PLAYER_ID ? guide.status : "pending";
+  const nextStatus = editorIsAdmin ? guide.status : "pending";
   const [row] = await db
     .update(guidesTable)
     .set({
@@ -280,7 +282,8 @@ router.post("/guides/:id/comments", async (req, res) => {
 // ── Admin: pending queue + review + comment deletion ──
 async function requireAdmin(apiKey: string) {
   const player = await verifyTornKey(apiKey);
-  return player && player.playerId === ADMIN_PLAYER_ID ? player : null;
+  if (!player) return null;
+  return (await isAdminPlayer(player.playerId)) ? player : null;
 }
 
 router.post("/guides/admin/list", async (req, res) => {

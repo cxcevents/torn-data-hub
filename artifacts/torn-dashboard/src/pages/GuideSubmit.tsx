@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useApiKey } from "@/hooks/use-api-key";
 import { useTornUser } from "@/hooks/use-torn-user";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 import { CATEGORIES, AUDIENCES, type GuideCategory, type GuideAudience } from "@/lib/guides";
 import { submitGuide, editGuide, fetchGuide } from "@/lib/guides-api";
 import RichTextEditor from "@/components/rich-text-editor";
@@ -19,7 +20,6 @@ function toEditorHtml(body: string): string {
     .join("");
 }
 
-const ADMIN_PLAYER_ID = 2032555;
 
 export default function GuideSubmit() {
   const [, navigate] = useLocation();
@@ -109,7 +109,7 @@ export default function GuideSubmit() {
   }
 
   const field = "w-full bg-card border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary/60 placeholder:text-muted-foreground";
-  const isAdmin = user?.player_id === ADMIN_PLAYER_ID;
+  const { isAdmin } = useIsAdmin(apiKey);
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">

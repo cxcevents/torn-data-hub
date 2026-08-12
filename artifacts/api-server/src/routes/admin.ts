@@ -1,6 +1,11 @@
 import { Router, type IRouter } from "express";
 import { z } from "zod";
+import { db } from "@workspace/db";
+import { admins } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 import { cleanup, getSessions, getHistory, getActivePlayerIds } from "../lib/session-store";
+import { verifyTornKey } from "../lib/torn-verify";
+import { isAdminPlayer, isPrimaryAdmin, invalidateAdminCache } from "../lib/admins";
 
 const router: IRouter = Router();
 
@@ -26,7 +31,7 @@ router.post("/admin/sessions", async (req, res) => {
     return;
   }
 
-  if (tornData.error || tornData.player_id !== ADMIN_PLAYER_ID) {
+  if (tornData.error || !tornData.player_id || !(await isAdminPlayer(tornData.player_id))) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
@@ -86,8 +91,75 @@ async function verifyAdmin(apiKey: string): Promise<boolean> {
   );
   if (!tornRes.ok) return false;
   const data = (await tornRes.json()) as { player_id?: number; error?: unknown };
-  return !data.error && data.player_id === ADMIN_PLAYER_ID;
+  return !data.error && !!data.player_id && (await isAdminPlayer(data.player_id));
 }
+
+// ── Admin management: check status, list, grant, revoke ──
+
+router.post("/admin/check", async (req, res) => {
+  const { apiKey } = AdminBody.parse(req.body);
+  const player = await verifyTornKey(apiKey);
+  if (!player) {
+    res.json({ isAdmin: false, isPrimary: false });
+    return;
+  }
+  res.json({
+    isAdmin: await isAdminPlayer(player.playerId),
+    isPrimary: isPrimaryAdmin(player.playerId),
+  });
+});
+
+router.post("/admin/admins/list", async (req, res) => {
+  const { apiKey } = AdminBody.parse(req.body);
+  const player = await verifyTornKey(apiKey);
+  if (!player || !(await isAdminPlayer(player.playerId))) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  const rows = await db.select().from(admins);
+  res.json({ admins: rows.map((r) => r.playerId), primary: ADMIN_PLAYER_ID });
+});
+
+const GrantBody = z.object({
+  apiKey: z.string().min(1).max(64),
+  playerId: z.number().int().positive(),
+  name: z.string().min(1).max(100),
+});
+
+router.post("/admin/admins/add", async (req, res) => {
+  const { apiKey, playerId, name } = GrantBody.parse(req.body);
+  const player = await verifyTornKey(apiKey);
+  if (!player || !isPrimaryAdmin(player.playerId)) {
+    res.status(403).json({ error: "Only the primary admin can grant admin access" });
+    return;
+  }
+  if (isPrimaryAdmin(playerId)) {
+    res.status(400).json({ error: "You are already the primary admin" });
+    return;
+  }
+  await db
+    .insert(admins)
+    .values({ playerId, name, addedBy: player.playerId })
+    .onConflictDoNothing();
+  invalidateAdminCache(playerId);
+  res.json({ ok: true });
+});
+
+router.post("/admin/admins/remove", async (req, res) => {
+  const { apiKey, playerId } = GrantBody.omit({ name: true }).parse(req.body);
+  const player = await verifyTornKey(apiKey);
+  if (!player || !isPrimaryAdmin(player.playerId)) {
+    res.status(403).json({ error: "Only the primary admin can revoke admin access" });
+    return;
+  }
+  if (isPrimaryAdmin(playerId)) {
+    res.status(400).json({ error: "The primary admin cannot be removed" });
+    return;
+  }
+  await db.delete(admins).where(eq(admins.playerId, playerId));
+  invalidateAdminCache(playerId);
+  res.json({ ok: true });
+});
 
 router.post("/admin/baldr-pr", async (req, res) => {
   const { apiKey, removeIds, activeDays } = BaldrPrBody.parse(req.body);

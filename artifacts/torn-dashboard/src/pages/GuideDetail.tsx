@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useApiKey } from "@/hooks/use-api-key";
 import { useTornUser } from "@/hooks/use-torn-user";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 import { CATEGORIES, AUDIENCES } from "@/lib/guides";
 import {
   fetchGuide, voteGuide, commentGuide, adminDeleteComment,
   type GuideDetail as GuideData, type GuideComment,
 } from "@/lib/guides-api";
 
-const ADMIN_PLAYER_ID = 2032555;
 
 // Guide bodies are sanitized HTML from the server (rich text editor).
 // Legacy plain-text guides fall back to paragraph splitting.
@@ -36,7 +36,7 @@ export default function GuideDetail() {
   const slug = params?.slug ?? "";
   const { apiKey } = useApiKey();
   const { data: user } = useTornUser(apiKey);
-  const isAdmin = user?.player_id === ADMIN_PLAYER_ID;
+  const { isAdmin } = useIsAdmin(apiKey);
 
   const [guide, setGuide] = useState<GuideData | null>(null);
   const [comments, setComments] = useState<GuideComment[]>([]);

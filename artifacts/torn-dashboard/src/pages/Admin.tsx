@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { adminListPending, adminReview, type GuideDetail } from "@/lib/guides-api";
 import { CATEGORIES, AUDIENCES } from "@/lib/guides";
 import { useLevelingTargets, LIST_NAMES } from "@/hooks/use-leveling-targets";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 import { GitPullRequest, Search, Loader2 } from "lucide-react";
 
 const ADMIN_PLAYER_ID = 2032555;
@@ -39,7 +40,21 @@ function formatDuration(seconds: number): string {
   return `${Math.floor(h / 24)}d ${h % 24}h`;
 }
 
-function PlayerLink({ name, playerId, isAdmin }: { name: string; playerId: number; isAdmin?: boolean }) {
+function PlayerLink({
+  name,
+  playerId,
+  isSelf,
+  isAdminPlayer,
+  canToggle,
+  onToggleAdmin,
+}: {
+  name: string;
+  playerId: number;
+  isSelf?: boolean;
+  isAdminPlayer?: boolean;
+  canToggle?: boolean;
+  onToggleAdmin?: (playerId: number, name: string, makeAdmin: boolean) => void;
+}) {
   return (
     <div className="flex items-center gap-2">
       <a
@@ -52,10 +67,29 @@ function PlayerLink({ name, playerId, isAdmin }: { name: string; playerId: numbe
         <span className="text-muted-foreground font-normal">[{playerId}]</span>
         <ExternalLink className="w-3 h-3 text-muted-foreground/50" />
       </a>
-      {isAdmin && (
+      {isSelf && (
         <span className="text-[10px] font-bold uppercase tracking-wider text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded">
           You
         </span>
+      )}
+      {isAdminPlayer && !isSelf && (
+        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400/90 bg-amber-400/10 px-1.5 py-0.5 rounded">
+          Admin
+        </span>
+      )}
+      {canToggle && !isSelf && onToggleAdmin && (
+        <button
+          onClick={() => onToggleAdmin(playerId, name, !isAdminPlayer)}
+          title={isAdminPlayer ? "Revoke admin access" : "Grant admin access"}
+          className={cn(
+            "p-1 rounded transition-colors",
+            isAdminPlayer
+              ? "text-amber-400 hover:text-destructive hover:bg-destructive/10"
+              : "text-muted-foreground/30 hover:text-amber-400 hover:bg-amber-400/10",
+          )}
+        >
+          <Shield className="w-3.5 h-3.5" />
+        </button>
       )}
     </div>
   );
@@ -193,7 +227,48 @@ function BaldrCleanup({ apiKey }: { apiKey: string }) {
 export default function Admin() {
   const { apiKey } = useApiKey();
   const { data, isLoading: userLoading } = useTornUser(apiKey);
+  const { isAdmin: serverIsAdmin, isPrimary, loading: adminLoading } = useIsAdmin(apiKey);
   const [, navigate] = useLocation();
+
+  // Admin list (for badges + shield toggles in the player tables)
+  const [adminIds, setAdminIds] = useState<Set<number>>(new Set([ADMIN_PLAYER_ID]));
+  const fetchAdmins = useCallback(async () => {
+    if (!apiKey) return;
+    try {
+      const res = await fetch("/api/admin/admins/list", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey }),
+      });
+      if (!res.ok) return;
+      const body = (await res.json()) as { admins: number[]; primary: number };
+      setAdminIds(new Set([body.primary, ...body.admins]));
+    } catch {}
+  }, [apiKey]);
+
+  const toggleAdmin = useCallback(
+    async (playerId: number, name: string, makeAdmin: boolean) => {
+      if (!apiKey) return;
+      if (!makeAdmin && !window.confirm(`Revoke admin access from ${name} [${playerId}]?`)) return;
+      if (makeAdmin && !window.confirm(`Grant admin access to ${name} [${playerId}]? They will be able to review guides and see this panel.`)) return;
+      try {
+        const res = await fetch(`/api/admin/admins/${makeAdmin ? "add" : "remove"}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(makeAdmin ? { apiKey, playerId, name } : { apiKey, playerId }),
+        });
+        if (res.ok) {
+          setAdminIds((prev) => {
+            const next = new Set(prev);
+            if (makeAdmin) next.add(playerId);
+            else next.delete(playerId);
+            return next;
+          });
+        }
+      } catch {}
+    },
+    [apiKey],
+  );
 
   const [sessions, setSessions] = useState<AdminSession[] | null>(null);
   const [history, setHistory] = useState<HistoricalPlayer[] | null>(null);
@@ -202,11 +277,15 @@ export default function Admin() {
   const [error, setError] = useState<string | null>(null);
   const [lastFetched, setLastFetched] = useState<Date | null>(null);
 
-  const isAdmin = data?.player_id === ADMIN_PLAYER_ID;
+  const isAdmin = serverIsAdmin;
 
   useEffect(() => {
-    if (!userLoading && data && !isAdmin) navigate("/");
-  }, [data, userLoading, isAdmin, navigate]);
+    if (!userLoading && !adminLoading && data && !isAdmin) navigate("/");
+  }, [data, userLoading, adminLoading, isAdmin, navigate]);
+
+  useEffect(() => {
+    if (isAdmin && apiKey) fetchAdmins();
+  }, [isAdmin, apiKey, fetchAdmins]);
 
   const fetchSessions = useCallback(async () => {
     if (!apiKey) return;
@@ -276,7 +355,7 @@ export default function Admin() {
     }
   };
 
-  if (userLoading || !data) return null;
+  if (userLoading || adminLoading || !data) return null;
   if (!isAdmin) return null;
 
   return (
@@ -425,7 +504,14 @@ export default function Admin() {
                     <tr key={i} className="border-b border-border/20 hover:bg-muted/10 transition-colors">
                       <td className="px-4 py-3">
                         {s.name && s.playerId ? (
-                          <PlayerLink name={s.name} playerId={s.playerId} isAdmin={s.playerId === ADMIN_PLAYER_ID} />
+                          <PlayerLink
+                            name={s.name}
+                            playerId={s.playerId}
+                            isSelf={s.playerId === data.player_id}
+                            isAdminPlayer={adminIds.has(s.playerId)}
+                            canToggle={isPrimary}
+                            onToggleAdmin={toggleAdmin}
+                          />
                         ) : (
                           <div className="flex items-center gap-2 text-muted-foreground">
                             <User className="w-3.5 h-3.5" />
@@ -493,7 +579,14 @@ export default function Admin() {
                   history.map((h) => (
                     <tr key={h.playerId} className="border-b border-border/20 hover:bg-muted/10 transition-colors opacity-80">
                       <td className="px-4 py-3">
-                        <PlayerLink name={h.name} playerId={h.playerId} isAdmin={h.playerId === ADMIN_PLAYER_ID} />
+                        <PlayerLink
+                          name={h.name}
+                          playerId={h.playerId}
+                          isSelf={h.playerId === data.player_id}
+                          isAdminPlayer={adminIds.has(h.playerId)}
+                          canToggle={isPrimary}
+                          onToggleAdmin={toggleAdmin}
+                        />
                       </td>
                       <td className="px-4 py-3 text-center tabular-nums text-muted-foreground">
                         {h.level ?? <span className="text-muted-foreground/40">—</span>}
