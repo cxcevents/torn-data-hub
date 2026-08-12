@@ -36,7 +36,7 @@ const STATUS_PRIORITY: Record<TargetStatus, number> = {
   loading: 6,
 };
 
-type SortKey = "name" | "level" | "status" | "life" | "stats";
+type SortKey = "name" | "level" | "status" | "life" | "stats" | "lastAction";
 type SortDir = "asc" | "desc";
 
 function autoSort(targets: LevelingTarget[]): LevelingTarget[] {
@@ -67,6 +67,15 @@ function manualSort(targets: LevelingTarget[], key: SortKey, dir: SortDir): Leve
       cmp = ap - bp;
     }
     else if (key === "stats") cmp = a.targetTotal - b.targetTotal;
+    else if (key === "lastAction") {
+      // asc = most recently active first; unknown timestamps always sink to the bottom.
+      const at = a.lastActionTimestamp ?? 0;
+      const bt = b.lastActionTimestamp ?? 0;
+      if (!at && !bt) return 0;
+      if (!at) return 1;
+      if (!bt) return -1;
+      return dir === "asc" ? bt - at : at - bt;
+    }
     else {
       const ap = STATUS_PRIORITY[a.statusState] ?? 6;
       const bp = STATUS_PRIORITY[b.statusState] ?? 6;
@@ -723,7 +732,9 @@ export default function LevelingTargets() {
                         </button>
                       </th>
                       <th className="px-4 py-2.5 text-left">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Last Action</span>
+                        <button onClick={() => handleSort("lastAction")} className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors">
+                          Last Action <SortIcon active={sortKey === "lastAction"} dir={sortDir} />
+                        </button>
                       </th>
                       <th className="px-4 py-2.5 w-28" />
                     </tr>

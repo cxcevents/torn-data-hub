@@ -57,6 +57,8 @@ export interface LevelingTarget {
   statusDescription: string;
   lastActionRelative: string;
   lastActionStatus: string;
+  /** Unix seconds of the player's last action (0 = unknown). */
+  lastActionTimestamp: number;
 }
 
 export type FetchPhase = "idle" | "loading" | "fetching" | "done" | "error";
@@ -143,6 +145,7 @@ function makeLoadingTarget(entry: number | BaldrEntry): LevelingTarget {
     statusDescription: "",
     lastActionRelative: "",
     lastActionStatus: "",
+    lastActionTimestamp: 0,
   };
 }
 
@@ -249,6 +252,7 @@ export function useLevelingTargets(apiKey: string | null) {
                 statusDescription: profile.status?.description ?? "",
                 lastActionRelative: profile.last_action?.relative ?? "",
                 lastActionStatus: profile.last_action?.status ?? "",
+                lastActionTimestamp: profile.last_action?.timestamp ?? 0,
               };
             } else {
               targets[i] = { ...targets[i], statusState: "error" };
