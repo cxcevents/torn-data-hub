@@ -4,27 +4,22 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
+// PORT is only set when the dev server runs; production builds don't have it.
+// Fall back to a dummy port for `vite build` and only enforce it for `serve`.
 const rawPort = process.env.PORT;
+const isServe = process.argv.some((a) => a === "dev" || a === "serve" || a === "preview");
 
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
+if (isServe && !rawPort) {
+  throw new Error("PORT environment variable is required but was not provided.");
 }
 
-const port = Number(rawPort);
+const port = Number(rawPort ?? 5173);
 
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-const basePath = process.env.BASE_PATH;
-
-if (!basePath) {
-  throw new Error(
-    "BASE_PATH environment variable is required but was not provided.",
-  );
-}
+const basePath = process.env.BASE_PATH ?? "/pi-scout/";
 
 export default defineConfig({
   base: basePath,
