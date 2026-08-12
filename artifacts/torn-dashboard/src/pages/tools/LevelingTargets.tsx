@@ -22,7 +22,7 @@ const LEVEL_LOCK = 0.25; // little XP when target level < 25% of yours
 
 // Players active within this window are probably no longer safe leveling
 // targets — they train, so old spy reports mislead. Hidden by default.
-const RECENT_ACTIVE_DAYS = 90;
+const RECENT_ACTIVE_DAYS = 150;
 const isRecentlyActive = (t: LevelingTarget, nowUnix: number) =>
   t.lastActionTimestamp > 0 && nowUnix - t.lastActionTimestamp < RECENT_ACTIVE_DAYS * 86_400;
 
