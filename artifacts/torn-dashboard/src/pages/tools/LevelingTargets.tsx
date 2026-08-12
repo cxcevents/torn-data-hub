@@ -23,8 +23,23 @@ const LEVEL_LOCK = 0.25; // little XP when target level < 25% of yours
 // Players active within this window are probably no longer safe leveling
 // targets — they train, so old spy reports mislead. Hidden by default.
 const RECENT_ACTIVE_DAYS = 150;
-const isRecentlyActive = (t: LevelingTarget, nowUnix: number) =>
-  t.lastActionTimestamp > 0 && nowUnix - t.lastActionTimestamp < RECENT_ACTIVE_DAYS * 86_400;
+
+// Results cached before the timestamp field existed only have the relative
+// string ("3 days ago"). Parse it as a fallback so sorting/filtering still works.
+const RELATIVE_UNITS: Record<string, number> = {
+  second: 1, minute: 60, hour: 3600, day: 86_400, week: 604_800, month: 2_592_000, year: 31_536_000,
+};
+function effectiveLastActionTs(t: LevelingTarget, nowUnix: number): number {
+  if (t.lastActionTimestamp > 0) return t.lastActionTimestamp;
+  const m = /(\d+)\s+(second|minute|hour|day|week|month|year)/.exec(t.lastActionRelative ?? "");
+  if (!m) return 0;
+  return nowUnix - parseInt(m[1], 10) * RELATIVE_UNITS[m[2]];
+}
+
+const isRecentlyActive = (t: LevelingTarget, nowUnix: number) => {
+  const ts = effectiveLastActionTs(t, nowUnix);
+  return ts > 0 && nowUnix - ts < RECENT_ACTIVE_DAYS * 86_400;
+};
 
 const LAST_ACTION_PRIORITY: Record<string, number> = {
   Online: 0,
@@ -75,8 +90,9 @@ function manualSort(targets: LevelingTarget[], key: SortKey, dir: SortDir): Leve
     else if (key === "stats") cmp = a.targetTotal - b.targetTotal;
     else if (key === "lastAction") {
       // asc = most recently active first; unknown timestamps always sink to the bottom.
-      const at = a.lastActionTimestamp ?? 0;
-      const bt = b.lastActionTimestamp ?? 0;
+      const nowUnix = Math.floor(Date.now() / 1000);
+      const at = effectiveLastActionTs(a, nowUnix);
+      const bt = effectiveLastActionTs(b, nowUnix);
       if (!at && !bt) return 0;
       if (!at) return 1;
       if (!bt) return -1;
