@@ -65,6 +65,26 @@ export function Onboarding() {
               Your key is never sent to any server. It's stored only in your browser's local storage, and all API calls go directly from your browser to api.torn.com.
             </p>
           </div>
+          <p className="text-xs text-muted-foreground/70 text-center pt-2">
+            Created by{" "}
+            <a
+              href="https://www.torn.com/profiles.php?XID=2032555"
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary/80 hover:text-primary transition-colors font-medium"
+            >
+              jonthegray [2032555]
+            </a>{" "}
+            · open source on{" "}
+            <a
+              href="https://github.com/cxcevents/torn-data-hub"
+              target="_blank"
+              rel="noreferrer"
+              className="text-primary/80 hover:text-primary transition-colors font-medium"
+            >
+              GitHub
+            </a>
+          </p>
         </CardFooter>
       </Card>
     </div>
