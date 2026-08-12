@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { adminListPending, adminReview, type GuideDetail } from "@/lib/guides-api";
 import { CATEGORIES, AUDIENCES } from "@/lib/guides";
+import { useLevelingTargets, LIST_NAMES } from "@/hooks/use-leveling-targets";
+import { GitPullRequest, Search, Loader2 } from "lucide-react";
 
 const ADMIN_PLAYER_ID = 2032555;
 const REFRESH_INTERVAL_MS = 30_000;
@@ -54,6 +56,135 @@ function PlayerLink({ name, playerId, isAdmin }: { name: string; playerId: numbe
         <span className="text-[10px] font-bold uppercase tracking-wider text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded">
           You
         </span>
+      )}
+    </div>
+  );
+}
+
+const BALDR_ACTIVE_DAYS = 150;
+
+function BaldrCleanup({ apiKey }: { apiKey: string }) {
+  const { state, fetchLists, cancel } = useLevelingTargets(apiKey);
+  const { phase, total, checked, targets, error } = state;
+  const isRunning = phase === "loading" || phase === "fetching";
+
+  const [submitting, setSubmitting] = useState(false);
+  const [prUrl, setPrUrl] = useState<string | null>(null);
+  const [prError, setPrError] = useState<string | null>(null);
+  const [showNames, setShowNames] = useState(false);
+
+  const nowUnix = Math.floor(Date.now() / 1000);
+  const activeTargets =
+    phase === "done"
+      ? targets.filter(
+          (t) =>
+            t.lastActionTimestamp > 0 &&
+            nowUnix - t.lastActionTimestamp < BALDR_ACTIVE_DAYS * 86_400,
+        )
+      : [];
+
+  const submitPr = async () => {
+    if (activeTargets.length === 0 || submitting) return;
+    setSubmitting(true);
+    setPrError(null);
+    try {
+      const res = await fetch("/api/admin/baldr-pr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apiKey,
+          removeIds: activeTargets.map((t) => t.id),
+          activeDays: BALDR_ACTIVE_DAYS,
+        }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { prUrl?: string; error?: string };
+      if (!res.ok || !body.prUrl) {
+        setPrError(body.error ?? "Failed to open the pull request");
+        return;
+      }
+      setPrUrl(body.prUrl);
+    } catch {
+      setPrError("Network error — could not reach the server");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <GitPullRequest className="w-4 h-4 text-primary" />
+        <h2 className="font-semibold">Baldr list cleanup</h2>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Scans every player across all {LIST_NAMES.length} lists with your API key, finds anyone
+        active in the last {BALDR_ACTIVE_DAYS} days, and opens a pull request on Oran's GitHub
+        repo removing them. Oran/Baldr decides whether to merge it.
+      </p>
+
+      <div className="flex items-center gap-3 flex-wrap">
+        {!isRunning ? (
+          <Button size="sm" onClick={() => fetchLists([...LIST_NAMES])} disabled={!apiKey} className="gap-2">
+            <Search className="w-3.5 h-3.5" />
+            {phase === "done" ? "Re-scan all lists" : "Scan all lists"}
+          </Button>
+        ) : (
+          <>
+            <Button size="sm" variant="outline" onClick={cancel} className="gap-2 border-destructive/40 text-destructive">
+              <X className="w-3.5 h-3.5" /> Cancel
+            </Button>
+            <span className="text-xs text-muted-foreground font-mono flex items-center gap-2">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              {phase === "loading" ? "Loading lists…" : `${checked} / ${total} checked`}
+            </span>
+          </>
+        )}
+
+        {phase === "done" && (
+          <span className="text-xs text-muted-foreground">
+            {targets.length} players scanned —{" "}
+            <button
+              onClick={() => setShowNames((s) => !s)}
+              className={cn(
+                "font-bold",
+                activeTargets.length > 0 ? "text-amber-400 hover:underline" : "text-green-400",
+              )}
+            >
+              {activeTargets.length} active &lt;{BALDR_ACTIVE_DAYS}d
+            </button>
+          </span>
+        )}
+
+        {phase === "done" && activeTargets.length > 0 && !prUrl && (
+          <Button size="sm" variant="outline" onClick={submitPr} disabled={submitting} className="gap-2">
+            {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <GitPullRequest className="w-3.5 h-3.5" />}
+            {submitting ? "Opening PR…" : `Submit PR removing ${activeTargets.length}`}
+          </Button>
+        )}
+      </div>
+
+      {showNames && activeTargets.length > 0 && (
+        <div className="rounded-md border border-border/40 bg-muted/10 px-3 py-2 text-xs text-muted-foreground max-h-40 overflow-y-auto">
+          {activeTargets.map((t) => (
+            <span key={t.id} className="inline-block mr-3">
+              {t.name} [{t.id}] — {t.lastActionRelative || "recently"}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {prUrl && (
+        <div className="rounded-md border border-green-400/30 bg-green-400/10 px-3 py-2 text-sm text-green-400">
+          Pull request opened —{" "}
+          <a href={prUrl} target="_blank" rel="noopener noreferrer" className="underline font-bold">
+            view it on GitHub <ExternalLink className="w-3 h-3 inline" />
+          </a>
+        </div>
+      )}
+      {(error || prError) && (
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {error || prError}
+        </div>
       )}
     </div>
   );
@@ -182,6 +313,9 @@ export default function Admin() {
           {error}
         </div>
       )}
+
+      {/* Baldr list cleanup */}
+      {apiKey && <BaldrCleanup apiKey={apiKey} />}
 
       {/* Pending guide submissions */}
       <div className="space-y-3">
