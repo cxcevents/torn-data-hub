@@ -231,6 +231,7 @@ export default function Admin() {
   const [, navigate] = useLocation();
 
   // Admin list (for badges + shield toggles in the player tables)
+  const [adminList, setAdminList] = useState<{ playerId: number; name: string }[]>([]);
   const [adminIds, setAdminIds] = useState<Set<number>>(new Set([ADMIN_PLAYER_ID]));
   const fetchAdmins = useCallback(async () => {
     if (!apiKey) return;
@@ -241,8 +242,12 @@ export default function Admin() {
         body: JSON.stringify({ apiKey }),
       });
       if (!res.ok) return;
-      const body = (await res.json()) as { admins: number[]; primary: number };
-      setAdminIds(new Set([body.primary, ...body.admins]));
+      const body = (await res.json()) as {
+        admins: { playerId: number; name: string }[];
+        primary: number;
+      };
+      setAdminList(body.admins);
+      setAdminIds(new Set([body.primary, ...body.admins.map((a) => a.playerId)]));
     } catch {}
   }, [apiKey]);
 
@@ -258,17 +263,42 @@ export default function Admin() {
           body: JSON.stringify(makeAdmin ? { apiKey, playerId, name } : { apiKey, playerId }),
         });
         if (res.ok) {
-          setAdminIds((prev) => {
-            const next = new Set(prev);
-            if (makeAdmin) next.add(playerId);
-            else next.delete(playerId);
-            return next;
-          });
+          fetchAdmins();
+        } else {
+          const err = (await res.json().catch(() => ({}))) as { error?: string };
+          window.alert(err.error ?? "Request failed");
         }
       } catch {}
     },
-    [apiKey],
+    [apiKey, fetchAdmins],
   );
+
+  // Add an admin by raw player ID (for players who haven't visited yet)
+  const [newAdminId, setNewAdminId] = useState("");
+  const [addingAdmin, setAddingAdmin] = useState(false);
+  const addAdminById = useCallback(async () => {
+    const playerId = parseInt(newAdminId.trim(), 10);
+    if (!apiKey || !playerId || playerId <= 0 || addingAdmin) return;
+    setAddingAdmin(true);
+    try {
+      const res = await fetch("/api/admin/admins/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey, playerId }),
+      });
+      if (res.ok) {
+        setNewAdminId("");
+        fetchAdmins();
+      } else {
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        window.alert(err.error ?? "Could not add that player");
+      }
+    } catch {
+      window.alert("Network error — could not reach the server");
+    } finally {
+      setAddingAdmin(false);
+    }
+  }, [apiKey, newAdminId, addingAdmin, fetchAdmins]);
 
   const [sessions, setSessions] = useState<AdminSession[] | null>(null);
   const [history, setHistory] = useState<HistoricalPlayer[] | null>(null);
@@ -390,6 +420,58 @@ export default function Admin() {
       {error && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
+        </div>
+      )}
+
+      {/* Admins */}
+      {isPrimary && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Shield className="w-4 h-4 text-primary" />
+            <h2 className="font-semibold">Admins</h2>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Admins can review guide submissions, delete comments, and see this panel. You can also
+            grant access with the shield icon next to any player in the lists below.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium bg-primary/10 text-primary px-2 py-1 rounded-md">
+              You (primary)
+            </span>
+            {adminList.map((a) => (
+              <span
+                key={a.playerId}
+                className="flex items-center gap-1.5 text-xs bg-amber-400/10 text-amber-400 border border-amber-400/20 px-2 py-1 rounded-md"
+              >
+                {a.name} [{a.playerId}]
+                <button
+                  onClick={() => toggleAdmin(a.playerId, a.name, false)}
+                  title="Revoke admin access"
+                  className="hover:text-destructive transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={newAdminId}
+              onChange={(e) => setNewAdminId(e.target.value.replace(/\D/g, ""))}
+              onKeyDown={(e) => e.key === "Enter" && addAdminById()}
+              placeholder="Player ID (e.g. 2032555)"
+              className="h-8 w-48 rounded-md border border-border bg-background px-2.5 text-sm outline-none focus:border-primary/50"
+            />
+            <Button size="sm" variant="outline" onClick={addAdminById} disabled={!newAdminId || addingAdmin} className="gap-1.5">
+              <Shield className="w-3.5 h-3.5" />
+              {addingAdmin ? "Adding…" : "Add admin"}
+            </Button>
+            <span className="text-[10px] text-muted-foreground/50">
+              Works even if they've never visited — the name is looked up from Torn.
+            </span>
+          </div>
         </div>
       )}
 

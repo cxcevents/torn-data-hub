@@ -117,17 +117,22 @@ router.post("/admin/admins/list", async (req, res) => {
     return;
   }
   const rows = await db.select().from(admins);
-  res.json({ admins: rows.map((r) => r.playerId), primary: ADMIN_PLAYER_ID });
+  res.json({
+    admins: rows.map((r) => ({ playerId: r.playerId, name: r.name })),
+    primary: ADMIN_PLAYER_ID,
+  });
 });
 
 const GrantBody = z.object({
   apiKey: z.string().min(1).max(64),
   playerId: z.number().int().positive(),
-  name: z.string().min(1).max(100),
+  // Optional — when omitted (adding by raw ID), we resolve the name from Torn.
+  name: z.string().min(1).max(100).optional(),
 });
 
 router.post("/admin/admins/add", async (req, res) => {
-  const { apiKey, playerId, name } = GrantBody.parse(req.body);
+  const { apiKey, playerId, name: givenName } = GrantBody.parse(req.body);
+  let name = givenName;
   const player = await verifyTornKey(apiKey);
   if (!player || !isPrimaryAdmin(player.playerId)) {
     res.status(403).json({ error: "Only the primary admin can grant admin access" });
@@ -136,6 +141,23 @@ router.post("/admin/admins/add", async (req, res) => {
   if (isPrimaryAdmin(playerId)) {
     res.status(400).json({ error: "You are already the primary admin" });
     return;
+  }
+  if (!name) {
+    // Resolve the player's name from Torn so raw-ID grants hit a real player.
+    try {
+      const tornRes = await fetch(
+        `https://api.torn.com/user/${playerId}?selections=basic&key=${encodeURIComponent(apiKey)}`,
+      );
+      const data = (await tornRes.json()) as { name?: string; error?: unknown };
+      if (!tornRes.ok || data.error || !data.name) {
+        res.status(404).json({ error: `No Torn player found with ID ${playerId}` });
+        return;
+      }
+      name = data.name;
+    } catch {
+      res.status(502).json({ error: "Could not reach Torn API to verify that player" });
+      return;
+    }
   }
   await db
     .insert(admins)
