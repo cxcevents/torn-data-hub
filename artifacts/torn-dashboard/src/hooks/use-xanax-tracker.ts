@@ -39,8 +39,8 @@ export function useXanaxTracker(apiKey: string | null, xantakenTotal: number | u
   const [manual, setManual] = useState<ManualCounts>(loadManual);
 
   const { data: logData, isLoading: logLoading, isError: logError, refetch: refetchLog, isFetching: logFetching } = useXanaxLog(apiKey);
-  const { data: archive, refetch: refetchArchive } = useXanaxArchive(playerId);
-  useXanaxArchiveSync(playerId, logData?.dailyCounts);
+  const { data: archive, refetch: refetchArchive } = useXanaxArchive(apiKey, playerId);
+  useXanaxArchiveSync(apiKey, playerId, logData?.dailyCounts);
   const onBackfillDone = useCallback(() => { refetchArchive(); }, [refetchArchive]);
   useXanaxLifetimeBackfill(apiKey, playerId, archive, onBackfillDone);
 

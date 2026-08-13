@@ -3,13 +3,15 @@ import { z } from "zod";
 import { sql, eq, and, lt } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { xanaxHistoryTable } from "@workspace/db/schema";
+import { verifyTornKey } from "../lib/torn-verify";
+import { isAdminPlayer } from "../lib/admins";
 
 const router: IRouter = Router();
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const SyncBody = z.object({
-  playerId: z.number().int().positive(),
+  apiKey: z.string().min(1).max(64),
   days: z
     .array(
       z.object({
@@ -22,8 +24,15 @@ const SyncBody = z.object({
 });
 
 // Upsert log-derived daily counts into the permanent archive.
+// The player is derived from the verified API key — you can only write your own history.
 router.post("/xanax/history", async (req, res) => {
-  const { playerId, days } = SyncBody.parse(req.body);
+  const { apiKey, days } = SyncBody.parse(req.body);
+  const player = await verifyTornKey(apiKey);
+  if (!player) {
+    res.status(401).json({ error: "Invalid API key" });
+    return;
+  }
+  const playerId = player.playerId;
   await db
     .insert(xanaxHistoryTable)
     .values(days.map((d) => ({ playerId, date: d.date, count: d.count })))
@@ -37,10 +46,19 @@ router.post("/xanax/history", async (req, res) => {
   res.json({ ok: true, saved: days.length });
 });
 
-// Full archive for a player (optionally only days before a given date).
-router.get("/xanax/history", async (req, res) => {
-  const playerId = z.coerce.number().int().positive().parse(req.query.playerId);
-  const before = typeof req.query.before === "string" && DATE_RE.test(req.query.before) ? req.query.before : null;
+// Full archive for the key's own player (optionally only days before a given date).
+// POST so the API key travels in the body, never in a URL.
+router.post("/xanax/history/read", async (req, res) => {
+  const { apiKey, before: rawBefore } = z
+    .object({ apiKey: z.string().min(1).max(64), before: z.string().optional() })
+    .parse(req.body);
+  const player = await verifyTornKey(apiKey);
+  if (!player) {
+    res.status(401).json({ error: "Invalid API key" });
+    return;
+  }
+  const playerId = player.playerId;
+  const before = rawBefore && DATE_RE.test(rawBefore) ? rawBefore : null;
 
   const rows = await db
     .select({ date: xanaxHistoryTable.date, count: xanaxHistoryTable.count })
@@ -57,7 +75,14 @@ router.get("/xanax/history", async (req, res) => {
 
 // Backfill the archive from the full lifetime Torn log (server-side key).
 // Paginates selections=log&log=2290 backwards 100 entries at a time.
-router.post("/xanax/backfill", async (_req, res) => {
+router.post("/xanax/backfill", async (req, res) => {
+  const caller = await verifyTornKey(
+    z.object({ apiKey: z.string().min(1).max(64) }).parse(req.body).apiKey,
+  );
+  if (!caller || !(await isAdminPlayer(caller.playerId))) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   const key = process.env.TORN_API_KEY;
   if (!key) {
     res.status(503).json({ error: "TORN_API_KEY not configured" });
