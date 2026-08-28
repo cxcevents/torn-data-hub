@@ -14,3 +14,10 @@ uri = "file://lib/torn-extension/store-assets/screenshot-1-overview.jpg"
 type = "image"
 title = "Chrome Web Store screenshot (1280×800)"
 description = "Upload this on the Store listing tab of the developer dashboard."
+
+[[outputs]]
+id = "b2TWjyGHTbxt2YRQLrRhX"
+uri = "file://lib/torn-extension/torn-data-hub-extension-v3.3.6.zip"
+type = "unspecified"
+title = "Torn Data Hub Extension v3.3.6"
+description = "Chrome extension package with live online-member counts on ranked-war faction panels."
