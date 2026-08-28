@@ -28,3 +28,10 @@ uri = "file://lib/torn-extension/torn-data-hub-extension-v3.3.7.zip"
 type = "unspecified"
 title = "Torn Data Hub Extension v3.3.7"
 description = "Larger color-matched ranked-war online pills with a pulsing glow on the faction that has more members online."
+
+[[outputs]]
+id = "UcrpwMIdr8RXN08RiNwPn"
+uri = "file://lib/torn-extension/torn-data-hub-extension-v3.3.8.zip"
+type = "unspecified"
+title = "Torn Data Hub Extension v3.3.8"
+description = "Adds a live X/Y Okay-status availability pill for each ranked-war faction."
