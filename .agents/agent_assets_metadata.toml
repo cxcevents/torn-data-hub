@@ -35,3 +35,10 @@ uri = "file://lib/torn-extension/torn-data-hub-extension-v3.3.8.zip"
 type = "unspecified"
 title = "Torn Data Hub Extension v3.3.8"
 description = "Adds a live X/Y Okay-status availability pill for each ranked-war faction."
+
+[[outputs]]
+id = "aB97NCCk_0zeEWWdnisV_"
+uri = "file://lib/torn-extension/torn-data-hub-extension-v3.4.0.zip"
+type = "unspecified"
+title = "Torn Data Hub Extension v3.4.0"
+description = "Adds a full-tab preferences page with grouped toggles for every extension feature."
