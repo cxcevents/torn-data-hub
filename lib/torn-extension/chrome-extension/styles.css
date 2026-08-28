@@ -526,3 +526,33 @@
     filter: brightness(1.35);
   }
 }
+
+/* Controls added to TornTools' ranked-war filter when TornTools is installed. */
+.tdh-tt-pill-controls {
+  display: flex;
+  flex-direction: column;
+  align-self: flex-start;
+  gap: 3px;
+  min-width: 104px;
+  margin: 0 12px;
+  color: #eee;
+  font: 12px/1.25 Arial, sans-serif;
+}
+.tdh-tt-pill-controls strong {
+  margin-bottom: 1px;
+  color: #ddd;
+  font-weight: 700;
+}
+.tdh-tt-pill-controls label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tdh-tt-pill-controls input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #84cc16;
+}
