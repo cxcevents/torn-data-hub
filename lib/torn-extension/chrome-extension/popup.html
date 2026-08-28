@@ -111,6 +111,11 @@
       a { color: #f87171; text-decoration: none; }
       a:hover { text-decoration: underline; }
       .muted { color: #555; font-size: 10px; text-align: center; padding: 8px 0; }
+      .configure {
+        width: 100%; padding: 9px; border: 1px solid #3a3a3a; border-radius: 4px;
+        background: #222; color: #ddd; cursor: pointer; font-weight: 700;
+      }
+      .configure:hover { border-color: #dc2626; }
     </style>
   </head>
   <body>
@@ -120,28 +125,6 @@
     </div>
     <div class="body">
       <div id="vitals"><div class="muted">Loading…</div></div>
-      <div id="settings">
-        <label for="key">Torn API key (Limited Access or higher)</label>
-        <div class="row">
-          <input id="key" type="password" placeholder="Paste your API key" />
-          <button class="save" id="save">Save</button>
-        </div>
-        <div class="status" id="status"></div>
-        <label style="margin-top:12px">Features</label>
-        <div class="toggles" id="toggles">
-          <label class="toggle"><input type="checkbox" data-f="xanax" /> Xanax card (homepage)</label>
-          <label class="toggle"><input type="checkbox" data-f="refills" /> Refills card (homepage)</label>
-          <label class="toggle"><input type="checkbox" data-f="effstats" /> Effective battle stats (homepage)</label>
-          <label class="toggle"><input type="checkbox" data-f="gym" /> Gym efficiency card (gym page)</label>
-          <label class="toggle"><input type="checkbox" data-f="barlinks" /> Clickable Energy/Nerve bars + glow</label>
-          <label class="toggle"><input type="checkbox" data-f="nag" /> Full-energy warning</label>
-        </div>
-        <div class="note">
-          Turn features off if another extension already covers them.
-          Changes apply after refreshing the Torn tab.
-          Your key is stored only in this browser and sent only to api.torn.com.
-        </div>
-      </div>
     </div>
     <div class="foot">
       <span id="ver"></span>
