@@ -21,3 +21,10 @@ uri = "file://lib/torn-extension/torn-data-hub-extension-v3.3.6.zip"
 type = "unspecified"
 title = "Torn Data Hub Extension v3.3.6"
 description = "Chrome extension package with live online-member counts on ranked-war faction panels."
+
+[[outputs]]
+id = "X7FlN_-v0qbeQsPtWR65B"
+uri = "file://lib/torn-extension/torn-data-hub-extension-v3.3.7.zip"
+type = "unspecified"
+title = "Torn Data Hub Extension v3.3.7"
+description = "Larger color-matched ranked-war online pills with a pulsing glow on the faction that has more members online."
