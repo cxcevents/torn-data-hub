@@ -42,3 +42,10 @@ uri = "file://lib/torn-extension/torn-data-hub-extension-v3.4.0.zip"
 type = "unspecified"
 title = "Torn Data Hub Extension v3.4.0"
 description = "Adds a full-tab preferences page with grouped toggles for every extension feature."
+
+[[outputs]]
+id = "r4YuxtZbav7_o1jCilerh"
+uri = "file://lib/torn-extension/torn-data-hub-extension-v3.4.1.zip"
+type = "unspecified"
+title = "Torn Data Hub Extension v3.4.1"
+description = "Detects TornTools and adds synchronized Online count, Okay status, and Leader glow controls to its Ranked War Filter panel."
